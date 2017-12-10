@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+	<!-- 别名 -->
+	<typeAliases>
+		<package name="com.fade.domain" />
+	</typeAliases>
+	<mappers>
+		<!-- 通过扫描包的方式来进行批量加载映射文件 -->
+		<package name="com.fade.mapper" />
+	</mappers>
+</configuration>
