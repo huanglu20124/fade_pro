@@ -10,4 +10,68 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 		user_id=#{user_id}
 		</where>
 	</select>
+	
+	<!-- 插入新用户，返回主键 -->
+	<insert id="addUser" parameterType="User">
+	   <selectKey keyColumn="user_id" keyProperty="user_id" order="AFTER" resultType="Integer">
+	      SELECT LAST_INSERT_ID()
+	   </selectKey>
+	   insert into user values(null,#{telephone},#{fade_name},#{nickname},#{password},
+	                           #{sex},#{head_image_url},#{register_time},#{summary},
+	                           #{wechat_id},#{weibo_id},#{qq_id},#{concern_num},
+	                           #{fans_num},#{fade_num},#{area},#{wallpaper_url},
+	                           #{school})
+	</insert>
+	
+	<!-- 编辑用户昵称 -->
+	<update id="updateNickname" parameterType="User">
+	   update user set nickname=#{nickname} where user_id=#{user_id}
+	</update>
+	
+	<!-- 保存或更新用户头像 -->
+	<update id="updateHeadUrl">
+	   update user set head_image_url=#{head_image_url} where user_id=#{user_id}
+	</update>
+	
+	<!-- 获取关注的全部用户 -->
+	<select id="getStarUser" parameterType="int" resultType="User">
+	   select user_id, nickname from user a,relation b
+	    where b.user_star = a.user_id and b.user_fans = #{user_id}
+	</select>
+	
+	<!-- 查询手机号是否已被注册 -->
+	<select id="getUserByTel" parameterType="String" resultType="User">
+	   select user_id from user where telephone=#{telephone}
+	</select>
+	
+	<!-- 通过手机和密码登录 -->
+	<select id="getUserByTelPwd" parameterType="String" resultType="User">
+	   select * from from user where telephone=#{telephone} and password=#{password}
+	</select>
+	
+	<!-- 通过fade账号和密码登录 -->
+	<select id="getUserByFadePwd" parameterType="String" resultType="User">
+	   select * from from user where fade_name=#{fade_name} and password=#{password}
+	</select>
+	
+	<!-- 查询openid是否被注册 -->
+	<select id="getUserByOpenId" resultType="User">
+	   select user_id from user
+	   <where>
+	      <if test="type == 0">
+	          wechat_id=#{wechat_id}
+	      </if>
+	      <if test="type == 1">
+	          wechat_id=#{weibo_id}
+	      </if>	
+	      <if test="type == 2">
+	          wechat_id=#{qq_id}
+	      </if>		            
+	   </where>
+	</select>
+	
+	<!-- 根据fade_name查询用户 -->
+	<select id="getUserByFadeName" parameterType="String" resultType="User">
+	    select * from user where fade_name=#{fade_name}
+	</select>
 </mapper>

@@ -1,33 +1,31 @@
 package com.fade.exception;
 
+import com.fade.domain.ErrorMessage;
+
 /**
- * 
- * <p>Title: CustomException</p>
- * <p>Description: 系统自定义的异常类型，实际开发中可能要定义多种异常类型</p>
- * <p>Company: www.itcast.com</p> 
- * @author	传智.燕青
- * @date	2015-3-22下午2:50:30
- * @version 1.0
+ * 自定义的异常类
+ * @author huanglu
+ *
  */
 public class FadeException extends Exception {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	//异常信息
-	private String message;
+	private ErrorMessage errorMessage;
 	
-	public FadeException(String message){
-		super(message);
-		this.message = message;
-		
+	public FadeException(ErrorMessage errorMessage){
+		this.errorMessage = errorMessage;
 	}
 
-	public String getMessage() {
-		return message;
+	public ErrorMessage getErrorMessage() {
+		return errorMessage;
 	}
 
-	public void setMessage(String message) {
-		this.message = message;
+	public void setErrorMessage(ErrorMessage errorMessage) {
+		this.errorMessage = errorMessage;
 	}
 	
-	
-
 }

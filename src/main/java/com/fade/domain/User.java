@@ -36,26 +36,15 @@ public class User implements Serializable{
 	public void setFans_num(Integer fans_num) {
 		this.fans_num = fans_num;
 	}
-	public String getAera() {
-		return aera;
-	}
-	public void setAera(String aera) {
-		this.aera = aera;
-	}
-	public String getWallpapaer_url() {
-		return wallpapaer_url;
-	}
-	public void setWallpapaer_url(String wallpapaer_url) {
-		this.wallpapaer_url = wallpapaer_url;
-	}
+
 	private String weibo_id;
 	private String qq_id;	
 	
 	//7月22日新增属性
 	private Integer concern_num;
 	private Integer fans_num;
-	private String aera;
-	private String wallpapaer_url;
+	private String area;
+	private String wallpaper_url;
 	
 	//fade数量
 	private Integer fade_num;
@@ -163,4 +152,20 @@ public class User implements Serializable{
 		return "nickname="+nickname
 				+"user_id="+user_id;
 	}
+	public String getArea() {
+		return area;
+	}
+	public void setArea(String area) {
+		this.area = area;
+	}
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+	public String getWallpaper_url() {
+		return wallpaper_url;
+	}
+	public void setWallpaper_url(String wallpaper_url) {
+		this.wallpaper_url = wallpaper_url;
+	}
+
 }
