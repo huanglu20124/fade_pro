@@ -20,7 +20,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	                           #{sex},#{head_image_url},#{register_time},#{summary},
 	                           #{wechat_id},#{weibo_id},#{qq_id},0,
 	                           0,0,#{area},#{wallpaper_url},
-	                           #{school},#{salt})
+	                           #{school})
 	</insert>
 	
 	<!-- 编辑用户昵称 -->
@@ -45,13 +45,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	</select>
 	
 	<!-- 通过手机和密码登录 -->
-	<select id="getUserByTelPwd" parameterType="String" resultType="User">
-	   select * from from user where telephone=#{telephone} and password=#{password}
+	<select id="getUserByTelPwd" parameterType="User" resultType="User">
+	   select * from user where telephone=#{telephone} and password=#{password}
 	</select>
 	
 	<!-- 通过fade账号和密码登录 -->
-	<select id="getUserByFadePwd" parameterType="String" resultType="User">
-	   select * from from user where fade_name=#{fade_name} and password=#{password}
+	<select id="getUserByFadePwd" parameterType="User" resultType="User">
+	   select * from user where fade_name=#{fade_name} and password=#{password}
 	</select>
 	
 	<!-- 查询openid是否被注册 -->
@@ -84,13 +84,20 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	
 	<!-- 根据电话获取用户的盐 -->
 	<select id="getSaltByTel" parameterType="String" resultType="String">
-	    select salt from user
-	      where telephone=#{telephone}
+	    select b.salt from user a, user_salt b
+	      where a.telephone=#{telephone}
+	            and a.user_id=b.user_id
 	</select>
 	
 	<!-- 根据fade_name获取用户的盐 -->
 	<select id="getSaltByFadeName" parameterType="String" resultType="String">
-		select salt from user
-	      where fade_name=#{fade_name}
+	    select b.salt from user a, user_salt b
+	      where a.fade_name=#{fade_name}
+	            and a.user_id=b.user_id
 	</select>
+	
+	<!-- 新增盐 -->
+	<insert id="addSalt">
+	   insert into user_salt values(null,#{user_id},#{salt});
+	</insert>
 </mapper>

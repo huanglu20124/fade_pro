@@ -21,9 +21,9 @@ public interface UserDao {
 	//查询手机号是否已被注册
 	public User getUserByTel(String telephone);
 	//通过手机和密码登录 
-	public User getUserByTelPwd(String telephone, String password);
+	public User getUserByTelPwd(User user);
 	//通过fade账号和密码登录
-	public User getUserByFadePwd(String fade_name, String password);
+	public User getUserByFadePwd(User user);
 	//查询openid是否被注册
 	public User getUserByOpenId(@Param("open_id")String open_id,@Param("type")Integer type);
 	//根据fade_name查询用户
@@ -34,5 +34,7 @@ public interface UserDao {
 	public String getSaltByTel(String telephone);
 	//根据fade_name获取用户的盐
 	public String getSaltByFadeName(String fade_name);
+	//新增盐
+	public void addSalt(@Param("user_id")Integer user_id, @Param("salt")String salt);
 	
 }

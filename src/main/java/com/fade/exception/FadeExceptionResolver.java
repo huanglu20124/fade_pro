@@ -39,7 +39,7 @@ public class FadeExceptionResolver implements HandlerExceptionResolver {
 		logger.error(fadeException.getErrorMessage() + "\r\n" + getException(ex) + "\r\n");
 		try {
 			Map<String, Object>map = new HashMap<>();
-			map.put("err",fadeException.getErrorMessage() );
+			map.put("error",fadeException.getErrorMessage() );
 			response.getWriter().write(JSON.toJSONString(map));
 		} catch (IOException e) {
 			e.printStackTrace();

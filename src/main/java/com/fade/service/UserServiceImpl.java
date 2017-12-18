@@ -59,7 +59,7 @@ public class UserServiceImpl implements UserService {
 			map.put("tokenModel", model);
 			map.put("user", user);
 			//记录日志
-			logger.info("user_id="+user.getUser_id() + ", user_name="+user.getNickname() + ", 登录成功");
+			logger.info("user_id="+user.getUser_id() + ", user_name="+user.getNickname() + " 登录成功");
 			return JSON.toJSONString(map);
 		}
 	}
@@ -98,8 +98,7 @@ public class UserServiceImpl implements UserService {
 				    String origin_password = user.getPassword();
 				    String password_md5 = new Md5Hash(user.getPassword(), salt, 1).toString();
 				    user.setPassword(password_md5);
-					int user_id =  userDao.addUser(user);
-					user.setUser_id(user_id);
+					userDao.addUser(user);//user_id设置到user对象中
 					//新建tokenModel并返回
 					Map<String, Object>map = new HashMap<>();
 					TokenModel model = tokenUtil.createTokenModel(user.getUser_id());
@@ -107,7 +106,7 @@ public class UserServiceImpl implements UserService {
 					//设置为原密码
 					user.setPassword(origin_password);
 					map.put("user", user);
-					logger.info("wechat_id="+wechat_id+",user_id="+user_id+",注册登录成功");
+					logger.info("wechat_id="+wechat_id+",user_id="+user.getUser_id()+" 注册登录成功");
 					return JSON.toJSONString(map);
 			} else {
 				throw new FadeException("注册失败，该wechat_id的账号已被注册");
@@ -122,9 +121,9 @@ public class UserServiceImpl implements UserService {
 		//查询手机号是否被注册
 		Map<String, Object>map = new HashMap<>();
 		if(userDao.getUserByTel(telephone) == null){
-			map.put("ans", 0);
+			map.put("success", 0);
 		}else {
-			map.put("ans", 1);
+			map.put("success", 1);
 		}
 		return JSON.toJSONString(map);
 	}
@@ -140,15 +139,15 @@ public class UserServiceImpl implements UserService {
 		try {
 		    //设置盐，MD5加密，散列一次
 		    String salt = UUID.randomUUID().toString().substring(0,5);
-		    user.setSalt(salt);
 		    String origin_password = user.getPassword();
 		    String password_md5 = new Md5Hash(user.getPassword(), salt, 1).toString();
 		    user.setPassword(password_md5);
-			Integer user_id = userDao.addUser(user);
-			user.setUser_id(user_id);
-			logger.info("user_id="+user_id+",nickname="+user.getNickname()+"注册成功");
-			//新建token并返回,key为user_id
-			TokenModel model = tokenUtil.createTokenModel(user_id);
+			userDao.addUser(user);//主键属性被自动赋予到user中
+			logger.info("user_id="+user.getUser_id()+",nickname="+user.getNickname()+" 注册成功");
+			//把新建的盐写入盐表
+			userDao.addSalt(user.getUser_id(),salt);
+			//新建tokenModel并返回,key为user_id
+			TokenModel model = tokenUtil.createTokenModel(user.getUser_id());
 			Map<String, Object>ans_map = new HashMap<>();
 			ans_map.put("tokenModel", model);
 			//设置为原密码
@@ -161,8 +160,6 @@ public class UserServiceImpl implements UserService {
 		}
 	}
 
-	
-	
 	@Override
 	public String loginUser(User user) throws FadeException {
 		//安卓端昵称密码的注册方式
@@ -178,7 +175,7 @@ public class UserServiceImpl implements UserService {
 				md5_password = new Md5Hash(origin_password, salt, 1).toString();
 				user.setPassword(md5_password);
 			}
-			if ((ans_user = (User) userDao.getUserByTelPwd(user.getTelephone(), user.getPassword())) == null) {
+			if ((ans_user = (User) userDao.getUserByTelPwd(user)) == null) {
 				throw new FadeException("账号不存在或密码错误");
 			} 
 		}
@@ -191,7 +188,7 @@ public class UserServiceImpl implements UserService {
 				md5_password = new Md5Hash(origin_password, salt, 1).toString();
 				user.setPassword(md5_password);
 			}
-			if ((ans_user = (User) userDao.getUserByFadePwd(user.getFade_name(), user.getPassword())) == null) {
+			if ((ans_user = (User) userDao.getUserByFadePwd(user)) == null) {
 				throw new FadeException("账号不存在或密码错误");
 			}
 		}
@@ -204,12 +201,11 @@ public class UserServiceImpl implements UserService {
 			//最后要还原密码
 			if(origin_password != null) ans_user.setPassword(origin_password);
 			map.put("user", ans_user);
-			logger.info("user_id="+ans_user.getUser_id()+",nickname="+ans_user.getNickname()+"登录成功");
+			logger.info("user_id="+ans_user.getUser_id()+",nickname="+ans_user.getNickname()+" 登录成功");
 			return JSON.toJSONString(map);
 		}
 	}
 
-	
 	@Override
 	public String updateUserById(User user) throws FadeException {
 		//编辑用户信息(部分)
@@ -229,6 +225,16 @@ public class UserServiceImpl implements UserService {
 				throw new FadeException("修改个人信息失败！");
 			}
 		}
+	}
+
+	
+	@Override
+	public String logoutUserByToken(TokenModel model) throws FadeException {
+		//先从登录队列中移除
+		redisUtil.removeListIndex("user_"+model.getUser_id(), model.getToken());
+		//然后删除key
+		redisUtil.deleteKey(model.getToken());
+		return "{'success':'退出登录成功'}";
 	}
 	
 	

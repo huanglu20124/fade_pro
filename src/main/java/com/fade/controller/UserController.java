@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.alibaba.fastjson.JSON;
+import com.fade.domain.TokenModel;
 import com.fade.domain.User;
 import com.fade.exception.FadeException;
 import com.fade.service.UserService;
@@ -89,5 +91,13 @@ public class UserController {
 			throw new FadeException("包装User类出错");
 		}
 		return userService.updateUserById(user);
+	}
+
+	@RequestMapping(value = "/logoutByToken.action", method =  RequestMethod.POST)
+	@ResponseBody
+	public String logoutUserByToken(HttpServletRequest request)throws FadeException{
+		//注销登录
+		TokenModel model = JSON.parseObject(request.getParameter("tokenModel"),TokenModel.class);
+		return userService.logoutUserByToken(model);
 	}
 }
