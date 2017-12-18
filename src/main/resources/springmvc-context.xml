@@ -53,9 +53,17 @@
 	<!-- 定义统一异常处理器 -->
 	<bean class="com.fade.exception.FadeExceptionResolver"></bean>
 
-	<!-- SPringmvc的拦截器 -->
-	<!-- <mvc:interceptors> <mvc:interceptor> <mvc:mapping path="/*.action" 
-		/> <bean class="com.hl.intercepter.LoginInterceptor" /> </mvc:interceptor> 
-		</mvc:interceptors> -->
-		
+	<!-- springmvc的拦截器 -->
+	<!-- token拦截器 -->
+	<mvc:interceptors>
+	    <mvc:interceptor>
+	       <mvc:mapping path="/*.action"/>
+	       <mvc:exclude-mapping path="/loginWechat.action"/>
+	       <mvc:exclude-mapping path="/registerWechat.action"/>
+	       <mvc:exclude-mapping path="/registerQueryTel.action"/>
+	       <mvc:exclude-mapping path="/registerByName.action"/>
+	       <mvc:exclude-mapping path="/loginUser.action"/>
+	       <bean class="com.fade.intercepter.AuthorizationInterceptor"></bean>
+	    </mvc:interceptor>
+	</mvc:interceptors>
 </beans>

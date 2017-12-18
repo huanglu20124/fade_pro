@@ -1,31 +1,30 @@
 package com.fade.exception;
 
-import com.fade.domain.ErrorMessage;
-
 /**
  * 自定义的异常类
  * @author huanglu
  *
  */
 public class FadeException extends Exception {
-	
-	/**
-	 * 
-	 */
+
 	private static final long serialVersionUID = 1L;
 	//异常信息
-	private ErrorMessage errorMessage;
+	private String errorMessage;
 	
-	public FadeException(ErrorMessage errorMessage){
+	public FadeException(String errorMessage){
 		this.errorMessage = errorMessage;
 	}
 
-	public ErrorMessage getErrorMessage() {
+	public String getErrorMessage() {
 		return errorMessage;
 	}
 
-	public void setErrorMessage(ErrorMessage errorMessage) {
+	public void setErrorMessage(String errorMessage) {
 		this.errorMessage = errorMessage;
 	}
+
+
+
+
 	
 }

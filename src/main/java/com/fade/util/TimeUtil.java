@@ -14,7 +14,7 @@ public class TimeUtil {
 		String dateNowStr = sdf.format(d);
 		return dateNowStr;
 	}
-	
+
 	public static Date getTimeDate(String date_str){
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		try {
@@ -24,5 +24,12 @@ public class TimeUtil {
 			e.printStackTrace();
 			return null;
 		}
+	}
+
+	public static String getTimeForAuth(){
+		Date d = new Date();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+		String dateNowStr = sdf.format(d);
+		return dateNowStr;
 	}
 }

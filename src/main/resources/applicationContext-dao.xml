@@ -76,7 +76,7 @@
 		</property>
 		<property name="valueSerializer">
 			<bean
-				class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer" />
+				class="org.springframework.data.redis.serializer.StringRedisSerializer" />
 		</property>
 		<property name="hashKeySerializer">
 			<bean
@@ -100,5 +100,10 @@
 		<constructor-arg ref="jedisConnectionFactory" />
 		<constructor-arg ref="redisTemplate" />
 		<constructor-arg ref="redisCacheManager" />
+	</bean>
+	
+	<!-- 配置redis工具类 -->
+	<bean id="redisUtil" class="com.fade.util.RedisUtil">
+	   <property name="redisTemplate" ref="redisTemplate"></property>
 	</bean>
 </beans>

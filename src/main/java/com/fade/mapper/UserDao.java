@@ -28,6 +28,11 @@ public interface UserDao {
 	public User getUserByOpenId(@Param("open_id")String open_id,@Param("type")Integer type);
 	//根据fade_name查询用户
 	public User getUserByFadeName(String fade_name);
-	//
+	//编辑用户信息(部分)
+	public Integer updateUserById(User user);
+	//根据电话获取用户的盐
+	public String getSaltByTel(String telephone);
+	//根据fade_name获取用户的盐
+	public String getSaltByFadeName(String fade_name);
 	
 }

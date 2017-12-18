@@ -1,7 +1,5 @@
 package com.hl.test;
 
-import static org.junit.Assert.*;
-
 import java.util.List;
 
 import javax.annotation.Resource;
@@ -11,7 +9,7 @@ import org.junit.Test;
 import com.fade.domain.User;
 import com.fade.mapper.UserDao;
 import com.fade.service.UserService;
-import com.mysql.jdbc.TimeUtil;
+import com.fade.util.TokenUtil;
 
 public class UserTest extends BaseTest {
 	@Resource(name="userService")
@@ -20,6 +18,9 @@ public class UserTest extends BaseTest {
 	@Resource(name="userDao")
 	private UserDao userDao;
 
+	@Resource(name = "tokenUtil")
+	private TokenUtil tokenUtil;
+	
 	@Test
 	public void testAdd() throws Exception {
 		User user = new User();
@@ -58,4 +59,10 @@ public class UserTest extends BaseTest {
 		User user = userDao.getUserByTel("1233");
 		System.out.println(user);
 	}
+	
+	@Test
+	public void testToken() throws Exception {
+		
+	}
+
 }

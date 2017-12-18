@@ -49,6 +49,9 @@ public class User implements Serializable{
 	//fade数量
 	private Integer fade_num;
 	
+	//安全性新增：盐，登录时md5计算用
+	private String salt;
+	
 	public Integer getFade_num() {
 		return fade_num;
 	}
@@ -167,5 +170,13 @@ public class User implements Serializable{
 	public void setWallpaper_url(String wallpaper_url) {
 		this.wallpaper_url = wallpaper_url;
 	}
+	
+	public String getSalt() {
+		return salt;
+	}
+	public void setSalt(String salt) {
+		this.salt = salt;
+	}
 
+	
 }

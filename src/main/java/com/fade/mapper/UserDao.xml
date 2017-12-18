@@ -18,9 +18,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	   </selectKey>
 	   insert into user values(null,#{telephone},#{fade_name},#{nickname},#{password},
 	                           #{sex},#{head_image_url},#{register_time},#{summary},
-	                           #{wechat_id},#{weibo_id},#{qq_id},#{concern_num},
-	                           #{fans_num},#{fade_num},#{area},#{wallpaper_url},
-	                           #{school})
+	                           #{wechat_id},#{weibo_id},#{qq_id},0,
+	                           0,0,#{area},#{wallpaper_url},
+	                           #{school},#{salt})
 	</insert>
 	
 	<!-- 编辑用户昵称 -->
@@ -73,5 +73,24 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	<!-- 根据fade_name查询用户 -->
 	<select id="getUserByFadeName" parameterType="String" resultType="User">
 	    select * from user where fade_name=#{fade_name}
+	</select>
+	
+	<!-- 编辑用户信息(部分) -->
+	<update id="updateUserById" parameterType="User">
+	    update user set
+	      nickname=#{nickname},area=#{area},school=#{school},sex=#{sex},summary=#{summary}
+	        where user_id=#{user_id}
+	</update>
+	
+	<!-- 根据电话获取用户的盐 -->
+	<select id="getSaltByTel" parameterType="String" resultType="String">
+	    select salt from user
+	      where telephone=#{telephone}
+	</select>
+	
+	<!-- 根据fade_name获取用户的盐 -->
+	<select id="getSaltByFadeName" parameterType="String" resultType="String">
+		select salt from user
+	      where fade_name=#{fade_name}
 	</select>
 </mapper>
