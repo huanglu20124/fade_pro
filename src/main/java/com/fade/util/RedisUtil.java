@@ -1,6 +1,7 @@
 package com.fade.util;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.data.redis.core.RedisTemplate;
 
@@ -21,6 +22,10 @@ public class RedisUtil{
 		redisTemplate.opsForValue().set(key, value);
 	}
 	
+	public void addKey(String key, Object value,Long timeout,TimeUnit unit){
+		redisTemplate.opsForValue().set(key, value, timeout, unit);
+	}
+	
 	public void deleteKey(String key) {
 		//删除key
 		redisTemplate.delete(key);
@@ -36,7 +41,7 @@ public class RedisUtil{
 		return redisTemplate.opsForValue().get(key);
 	}
 	
-	public List<String> getRangeKey(String array_name) {
+	public List<String> listGetAll(String array_name) {
 		//得到整个队列
 		List<Object> origins=  redisTemplate.opsForList().range(array_name, 0l, -1l);
 		List<String>keys = new ArrayList<>();
@@ -46,13 +51,36 @@ public class RedisUtil{
 		return keys;
 	}
 
-	public void leftPush(String array_name,String uuid){
-		//将string插入到队列左边
-		redisTemplate.opsForList().leftPush(array_name, uuid);
+	public List<String> listGetRange(String array_name,Long start,Long end) {
+		//得到整个队列
+		List<Object> origins=  redisTemplate.opsForList().range(array_name, start, end);
+		List<String>keys = new ArrayList<>();
+		for(Object object : origins){
+			keys.add((String)object);
+		}
+		return keys;
+	}
+	
+	
+	public void listLeftPush(String array_name,String value){
+		//插入到队列左边
+		redisTemplate.opsForList().leftPush(array_name, value);
 	}
 
-	public void removeListIndex(String array_name,String key){
-		//删除队列中的key
-		redisTemplate.opsForList().remove(array_name, 1, key);
+	public void listRightPush(String array_name,String value){
+		//插入到队列左边
+		redisTemplate.opsForList().rightPush(array_name, value);
+	}	
+	
+	public void listRemoveValue(String array_name,String value){
+		//删除队列中的元素
+		redisTemplate.opsForList().remove(array_name, 1, value);
 	}
+	
+	public void zsetAddKey(String key, Object value, Double score){
+		//加入到zset里面
+		redisTemplate.opsForZSet().add(key, value, score);
+	}
+	
+
 }

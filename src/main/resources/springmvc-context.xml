@@ -54,15 +54,22 @@
 
 	<!-- springmvc的拦截器 -->
 	<!-- token拦截器 -->
-	<mvc:interceptors>
+<!-- 	<mvc:interceptors>
 	    <mvc:interceptor>
-	       <mvc:mapping path="/*.action"/>
-	       <mvc:exclude-mapping path="/loginWechat.action"/>
-	       <mvc:exclude-mapping path="/registerWechat.action"/>
-	       <mvc:exclude-mapping path="/registerQueryTel.action"/>
-	       <mvc:exclude-mapping path="/registerByName.action"/>
-	       <mvc:exclude-mapping path="/loginUser.action"/>
+	       <mvc:mapping path="/**"/>
+	       <mvc:exclude-mapping path="/html/*"/>
+	       <mvc:exclude-mapping path="/script/*"/>
+	       <mvc:exclude-mapping path="/loginWechat/*"/>
+	       <mvc:exclude-mapping path="/registerWechat"/>
+	       <mvc:exclude-mapping path="/registerQueryTel"/>
+	       <mvc:exclude-mapping path="/registerByName"/>
+	       <mvc:exclude-mapping path="/loginUserByTel/*/*"/>
+	       <mvc:exclude-mapping path="/loginUserByName/*/*"/>
 	       <bean class="com.fade.intercepter.AuthorizationInterceptor"></bean>
 	    </mvc:interceptor>
-	</mvc:interceptors>
+	</mvc:interceptors> -->
+	
+	<!-- 对静态资源放行 -->
+	<mvc:resources location="/html/" mapping="/html/**" /> 
+	<mvc:resources location="/script/" mapping="/script/**" /> 
 </beans>

@@ -26,9 +26,9 @@ public class TimeUtil {
 		}
 	}
 
-	public static String getTimeForAuth(){
+	public static String getYearMonth(){
 		Date d = new Date();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy年MM月");
 		String dateNowStr = sdf.format(d);
 		return dateNowStr;
 	}

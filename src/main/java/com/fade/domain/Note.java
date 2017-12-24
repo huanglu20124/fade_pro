@@ -1,41 +1,27 @@
 package com.fade.domain;
 
 import java.io.Serializable;
+import java.util.List;
 
-public class Note implements Serializable{
-
-
+public class Note implements Serializable {
 	/**
-	 * 
+	 * 帖子表
 	 */
 	private static final long serialVersionUID = 3337872547982353088L;
 	private Integer note_id;
 	private Integer user_id;
 	private String nickname;
 	private String head_image_url;
-	
+
 	private String note_content;
 	private String post_time;
-	private Integer isDie_fans;
-	private Integer isDie_stranger;
-	
+	private Integer is_die;
+
 	private Integer comment_num;
-	private Integer relay_num;
-	private Integer good_num;
-	
-	private Integer isRelay;
-	
-	private String post_area;
+	private Integer sub_num;
+	private Integer add_num;
 
-	
-
-	public String getPost_area() {
-		return post_area;
-	}
-
-	public void setPost_area(String post_area) {
-		this.post_area = post_area;
-	}
+	private List<Image> images;// 图片集合
 
 	public Integer getNote_id() {
 		return note_id;
@@ -51,14 +37,6 @@ public class Note implements Serializable{
 
 	public void setUser_id(Integer user_id) {
 		this.user_id = user_id;
-	}
-
-	public Integer getIsRelay() {
-		return isRelay;
-	}
-
-	public void setIsRelay(Integer isRelay) {
-		this.isRelay = isRelay;
 	}
 
 	public String getNickname() {
@@ -93,22 +71,6 @@ public class Note implements Serializable{
 		this.post_time = post_time;
 	}
 
-	public Integer getIsDie_fans() {
-		return isDie_fans;
-	}
-
-	public void setIsDie_fans(Integer isDie_fans) {
-		this.isDie_fans = isDie_fans;
-	}
-
-	public Integer getIsDie_stranger() {
-		return isDie_stranger;
-	}
-
-	public void setIsDie_stranger(Integer isDie_stranger) {
-		this.isDie_stranger = isDie_stranger;
-	}
-
 	public Integer getComment_num() {
 		return comment_num;
 	}
@@ -117,28 +79,42 @@ public class Note implements Serializable{
 		this.comment_num = comment_num;
 	}
 
-	public Integer getRelay_num() {
-		return relay_num;
+	public Integer getIs_die() {
+		return is_die;
 	}
 
-	public void setRelay_num(Integer relay_num) {
-		this.relay_num = relay_num;
+	public void setIs_die(Integer is_die) {
+		this.is_die = is_die;
 	}
 
-	public Integer getGood_num() {
-		return good_num;
+	public Integer getSub_num() {
+		return sub_num;
 	}
 
-	public void setGood_num(Integer good_num) {
-		this.good_num = good_num;
+	public void setSub_num(Integer sub_num) {
+		this.sub_num = sub_num;
 	}
 
+	public Integer getAdd_num() {
+		return add_num;
+	}
+
+	public void setAdd_num(Integer add_num) {
+		this.add_num = add_num;
+	}
 
 	@Override
 	public String toString() {
 		// TODO Auto-generated method stub
-		return "note_id="+note_id
-				+" note_content="+note_content
-				+" nickname="+ nickname;
+		return "note_id=" + note_id + " note_content=" + note_content + " nickname=" + nickname;
 	}
+
+	public List<Image> getImages() {
+		return images;
+	}
+
+	public void setImages(List<Image> images) {
+		this.images = images;
+	}
+
 }

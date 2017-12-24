@@ -2,8 +2,6 @@ package com.fade.exception;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -13,6 +11,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.alibaba.fastjson.JSON;
+import com.fade.domain.SimpleResponse;
 
 public class FadeExceptionResolver implements HandlerExceptionResolver {
 
@@ -38,9 +37,11 @@ public class FadeExceptionResolver implements HandlerExceptionResolver {
 		//日志记录原异常
 		logger.error(fadeException.getErrorMessage() + "\r\n" + getException(ex) + "\r\n");
 		try {
-			Map<String, Object>map = new HashMap<>();
-			map.put("error",fadeException.getErrorMessage() );
-			response.getWriter().write(JSON.toJSONString(map));
+/*			response.setStatus(org.springframework.http.HttpStatus.OK.value());
+			response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+			response.setHeader("Cache-Control", "no-cache, must-revalidate");*/
+			response.getWriter().write(JSON.toJSONString(
+					new SimpleResponse(null, fadeException.getErrorMessage())));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

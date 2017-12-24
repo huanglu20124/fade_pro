@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" >
+<title>测试页面</title>
+<script type="text/javascript" src="../script/jquery-3.2.1.min.js"></script>
+<script>
+	function loginUserByTel(){
+    $.ajax({
+        type: "GET",
+		dataType: "json",
+		headers: {
+          tokenModel:"{'user_id':16,'token':'e6130286-382c-4979-8094-b35acd9e510b'}"
+        },
+        url: "http://localhost:8080/fade_pro/getUserById/16",
+        //data:  {"telephone":"13763359943","password":"123"},
+        success: function(data){
+                alert(JSON.stringify(data));
+        }
+    })
+	}
+</script>
+
+</head>
+<body>
+本地：http://localhost:8080/fade_pro
+<br>
+云端https://sysufade.cn/fade_pro
+<br>
+
+手机注册方式，包括上传头像
+<form action="http://localhost:8080/fade_pro/registerByName" 
+method="post" enctype="multipart/form-data">
+   电话：<input type="text" name="telephone"  >
+   昵称：<input type="text" name="nickname"  >
+   性别：<input type="text" name="sex"  >
+   密码：<input type="text" name="password">
+ 头像：  <input type="file" name="file">
+  <input type="submit" value="提交" > 
+</form>
+<br>
+修改用户昵称及头像
+<form action="http://localhost:8080/fade_pro/updateUserById" method="post" enctype="multipart/form-data">
+ user_id：<input type="text" name="user_id"  >
+   昵称：<input type="text" name="nickname"  >
+ 头像：  <input type="file" name="file">
+  <input type="submit" value="提交" > 
+</form>
+<br>
+
+<br>
+上传帖子
+<form action="http://localhost:8080/fade_pro/addNote" method="post" enctype="multipart/form-data">
+ user_id：<input type="text" name="user_id"  >
+  图片1： <input type="file" name="file">
+   图片2： <input type="file" name="file">
+  内容： <input type="text" name="note_content">
+images:  <input type="text" name="images" value="[{'image_size':'1','image_coordinate':'1','image_cut_size':'1'},{'image_size':'1','image_coordinate':'1','image_cut_size':'1'}]">
+  <input type="submit" value="提交" > 
+</form>
+<br>
+
+
+http://localhost:8080/fade_pro/getUserById/16
+我的token{"user_id":16,"token":"e6130286-382c-4979-8094-b35acd9e510b"}
+<button onclick="loginUserByTel()">ajax测试</button>
+</body>
+</html>

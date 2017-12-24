@@ -19,7 +19,7 @@ public class TokenUtil {
 		//同时把tokenModel存储在redis中，token作为key
 		redisUtil.addKey(token,user_id.toString());
 		//加入到登录队列,"user_"+user_id作为key,value为token
-		redisUtil.leftPush("user_"+user_id,token);
+		redisUtil.listLeftPush("user_"+user_id,token);
 		return tokenModel;
 	}
  		
@@ -37,7 +37,7 @@ public class TokenUtil {
 	public void deleteToken(TokenModel tokenModel){
 		//退出登录
 		//移出登录队列
-		redisUtil.removeListIndex("user_"+tokenModel.getUser_id(), tokenModel.getToken());
+		redisUtil.listRemoveValue("user_"+tokenModel.getUser_id(), tokenModel.getToken());
 		//删除key
 		redisUtil.deleteKey(tokenModel.getToken());
 	}

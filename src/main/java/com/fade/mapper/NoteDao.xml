@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fade.mapper.NoteDao">
+
+	<!-- 插入新帖子-->
+	<insert id="addNote" parameterType="Note">
+	   <selectKey keyColumn="note_id" keyProperty="note_id" order="AFTER" resultType="Integer">
+	      SELECT LAST_INSERT_ID()
+	   </selectKey>
+	   insert into note values(null,#{user_id},#{note_content},#{post_time},0,0,0,1);
+	</insert>
+	
+	<!-- 批量插入图片 -->
+	<insert id="addNoteImageBatch" parameterType="Note">
+	   insert into note_image values
+	   <foreach collection="images" item="item" index="index" separator=",">
+	      (null,#{item.image_url},#{item.note_id},#{item.image_size},#{item.image_coordinate},#{item.image_cut_size})
+	   </foreach>
+	</insert>
+	
+	<!-- 宣布帖子死亡(批处理) -->
+	<update id="updateNoteDie">
+	    update note set is_die=0 
+	      where note_id in 
+	      <foreach collection="note_ids" item="item" open="(" close=")" separator=",">
+	          #{item}
+	      </foreach> 
+	</update>
+	
+	<!-- 一次查找关注用户的一百条,活的帖子加入到队列里，比较用到转义字符 -->
+	<select id="getMuchNoteId" resultType="Integer">
+	    <if test="search_id != 0">
+	    	    select distinct b.note_id, b.note_content, b.user_id,
+	    	    b.post_time,b.comment_num,b.add_num,b.sub_num,b.is_die, c.nickname
+	    	    from relation a, note b, user c 
+	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or b.user_id=#{user_id})
+	                   and b.is_die=1 
+	                   and c.user_id=b.user_id
+	                   and b.note_id&lt;#{search_id}
+	                   order by note_id desc
+	            limit 0,100
+	    </if>
+	    
+	    <if test="search_id == 0">
+	    	    select distinct b.note_id, b.note_content, b.user_id,
+	    	    b.post_time,b.comment_num,b.add_num,b.sub_num,b.is_die,c.nickname
+	    	    from relation a, note b, user c
+	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or b.user_id=#{user_id})
+	                   and b.is_die=1 
+	                   and c.user_id=b.user_id
+	                   order by note_id desc	                   
+	            limit 0,100	    
+	    </if>
+	</select>
+</mapper>

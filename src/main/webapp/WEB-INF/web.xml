@@ -35,10 +35,10 @@
 		<async-supported>true</async-supported>
 	</servlet>
 
-	<!-- 只对*.action结尾的url进行拦截 -->
+	<!-- 拦截所有-->
 	<servlet-mapping>
 		<servlet-name>dispatcher</servlet-name>
-		<url-pattern>*.action</url-pattern>
+		<url-pattern>/</url-pattern>
 	</servlet-mapping>
 
 	<!-- 配置过滤器，解决post的乱码问题 -->

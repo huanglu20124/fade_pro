@@ -20,7 +20,9 @@ public class AuthorizationInterceptor extends HandlerInterceptorAdapter{
 	@Override
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
 			throws Exception {
-		String tokenModel_str = request.getParameter("tokenModel");	
+		//String tokenModel_str = request.getParameter("tokenModel");
+		//改用从header头部获取token信息
+		String tokenModel_str = request.getHeader("tokenModel");
 		if(tokenModel_str == null) throw new FadeException("token为空，未通过验证");
 		else {
 			TokenModel model = null;
