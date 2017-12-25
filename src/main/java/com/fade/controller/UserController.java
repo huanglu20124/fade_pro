@@ -115,4 +115,18 @@ public class UserController {
 		TokenModel model = JSON.parseObject(tokenModel,TokenModel.class);
 		return userService.logoutUserByToken(model);
 	}
+
+	@RequestMapping(value = "/online",method =  RequestMethod.POST)
+	@ResponseBody
+	public String online(Integer user_id){
+		//上线请求
+		return userService.online(user_id);
+	}
+	
+	@RequestMapping(value = "/offline",method =  RequestMethod.POST)
+	@ResponseBody
+	public String offline(Integer user_id){
+		//上线请求
+		return userService.offline(user_id);
+	}	
 }

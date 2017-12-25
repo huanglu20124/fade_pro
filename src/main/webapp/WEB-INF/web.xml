@@ -23,6 +23,11 @@
 		<param-value>classpath:applicationContext-*.xml</param-value>
 	</context-param>
 
+    <!-- 每隔一段时间清理die_list中的帖子的监听器 -->
+    <listener>
+        <listener-class>com.fade.listener.CleanListener</listener-class>
+    </listener>
+    
 	<!-- spring MVC相关 -->
 	<servlet>
 		<servlet-name>dispatcher</servlet-name>

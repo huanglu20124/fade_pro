@@ -66,6 +66,8 @@ public class UserServiceImpl implements UserService {
 			map.put("user", user);
 			// 记录日志
 			logger.info("user_id=" + user.getUser_id() + ", user_name=" + user.getNickname() + " 登录成功");
+			//redis上线
+			redisUtil.addKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
 			return JSON.toJSONString(map);
 		}
 	}
@@ -109,6 +111,8 @@ public class UserServiceImpl implements UserService {
 				TokenModel model = tokenUtil.createTokenModel(user.getUser_id());
 				map.put("tokenModel", model);
 				logger.info("wechat_id=" + wechat_id + ",user_id=" + user.getUser_id() + " 注册登录成功");
+				//redis上线
+				redisUtil.addKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
 				//返回部分信息
 				Map<String, Object> extra = new HashMap<>();
 				extra.put("tokenModel", model);
@@ -177,6 +181,8 @@ public class UserServiceImpl implements UserService {
 		userDao.addSalt(user.getUser_id(), salt);
 		// 新建tokenModel并返回,key为user_id
 		TokenModel model = tokenUtil.createTokenModel(user.getUser_id());
+		//redis上线
+		redisUtil.addKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
 		//返回部分信息
 		Map<String, Object> extra = new HashMap<>();
 		extra.put("tokenModel", model);
@@ -230,6 +236,8 @@ public class UserServiceImpl implements UserService {
 			if (origin_password != null)
 				ans_user.setPassword(origin_password);
 			map.put("user", ans_user);
+			//redis上线
+			redisUtil.addKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
 			logger.info("user_id=" + ans_user.getUser_id() + ",nickname=" + ans_user.getNickname() + " 登录成功");
 			return JSON.toJSONString(map);
 		}
@@ -282,7 +290,7 @@ public class UserServiceImpl implements UserService {
 			if (userDao.updateUserById(user) == 1) {
 				logger.info("user_id=" + user.getUser_id() + ",nickname=" + user.getNickname() + "修改个人信息成功");
 				Map<String, Object>extra = new HashMap<>();
-				extra.put("head_image_url", Const.BASE_IP + user.getHead_image_url());
+				extra.put("head_image_url", user.getHead_image_url());
 				//同时返回头像信息
 				return JSON.toJSONString(new SimpleResponse("修改成功！",null,extra));
 			} else {
@@ -297,10 +305,13 @@ public class UserServiceImpl implements UserService {
 		redisUtil.listRemoveValue("user_" + model.getUser_id(), model.getToken());
 		// 然后删除key
 		redisUtil.deleteKey(model.getToken());
+		// 清除相关缓存
+		offline(model.getUser_id());
 		return JSON.toJSONString(new SimpleResponse("退出登录成功", null));
 	}
 
     private  String getUrlSuffix(String url){
+    	//获取url的“后缀”
     	int start = 0;
     	int count = 0;
     	for(int i = 0; i < url.length(); i++){
@@ -312,4 +323,19 @@ public class UserServiceImpl implements UserService {
     	}
     	return url.substring(start, url.length());
     }
+	
+    @Override
+	public String online(Integer user_id) {
+		//用户上线后，加入到online_user里
+    	redisUtil.setAddKey(Const.ONLINE_USERS,"user_"+user_id);
+		return JSON.toJSONString(new SimpleResponse("上线成功",null));
+	}
+
+	@Override
+	public String offline(Integer user_id) {
+		//清除redis队列的缓存
+		redisUtil.deleteKey("list1_" + user_id);//首页队列
+		redisUtil.deleteKey("list2_" + user_id);//首页更新队列
+		return JSON.toJSONString(new SimpleResponse("下线成功！", null));
+	}
 }

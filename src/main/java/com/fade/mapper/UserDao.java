@@ -36,5 +36,7 @@ public interface UserDao {
 	public String getSaltByFadeName(String fade_name);
 	//新增盐
 	public void addSalt(@Param("user_id")Integer user_id, @Param("salt")String salt);
+	//查询所有粉丝
+	public List<Integer> getAllFansId(Integer user_id);
 	
 }

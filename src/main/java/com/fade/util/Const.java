@@ -8,4 +8,15 @@ public class Const {
 	public static final String BASE_IP      = "http://localhost:8080/fade_pro/";
 	public static final String DATA_PATH    = "E:/study_and_work/project_data/fade/";//文件根目录
 	
+	//在线用户set集合
+	public static final String ONLINE_USERS = "online_users";
+	
+	//公有热门推送排行榜
+	public static final String HOT_NOTES    = "hot_notes"; 
+	
+	//一个帖子的默认生存时间(单位：分钟)
+	public static final long DEFAULT_LIFE   = 5l;
+	
+	//die_list，收集死亡的帖子，每隔一分钟清理一次
+	public static final String DIE_LIST     = "die_list";
 }

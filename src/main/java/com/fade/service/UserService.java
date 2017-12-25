@@ -24,5 +24,9 @@ public interface UserService {
 
 	String logoutUserByToken(TokenModel model) throws FadeException;
 
+	String online(Integer user_id);
+
+	String offline(Integer user_id);
+
 
 }

@@ -32,4 +32,5 @@ public class TimeUtil {
 		String dateNowStr = sdf.format(d);
 		return dateNowStr;
 	}
+	
 }

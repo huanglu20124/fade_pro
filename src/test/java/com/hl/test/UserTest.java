@@ -1,6 +1,5 @@
 package com.hl.test;
 
-
 import java.util.List;
 
 import javax.annotation.Resource;
@@ -71,47 +70,62 @@ public class UserTest extends BaseTest {
 	
 	@Test
 	public void testGetUserByTelephone() throws Exception {
-		User user = userDao.getUserByTel("1233");
+		User user = userDao.getUserByTel("13763359943");
 		System.out.println(user);
 	}
 	
 	@Test
 	public void testList() throws Exception {
-		for(int i = 0; i < 10; i++){
-			redisUtil.listLeftPush("test", "note_" + i);
-		}
-		List<String>list = redisUtil.listGetRange("test", 0l, -1l);
-		for(String temp : list){
-			System.out.println(temp);
-		}
+		redisUtil.listRightPush("test", "note_1");
+		redisUtil.listRightPush("test", "note_2");
+		redisUtil.listRightPush("test", "note_3");
+		redisUtil.listLeftPop("test");
+		System.out.println(redisUtil.listGetAll("test"));
 	}
-	
-	@Test
-	public void testgetMuchNoteId() throws Exception {
-		List<Integer>list = noteDao.getMuchNoteId(16, 83);
-		System.out.println(list.get(0));
-		System.out.println(list);
-	}
-	
+		
 	@Test
 	public void testAddNote() throws Exception {
-		for(int i = 0; i < 25; i++){
+		for(int i = 0; i < 5; i++){
 			Note note = new Note();
-			if(i < 10) note.setUser_id(16);
-			else if (i < 20) {
-				note.setUser_id(29);
-			}
-			else {
-				note.setUser_id(30);
-			}
+			if(i < 3) note.setUser_id(16);
+			else note.setUser_id(30);
+			note.setNickname("黄路啊");
 			note.setNote_content("内容测试"+i);
 			note.setPost_time(TimeUtil.getCurrentTime());
-			noteService.addNote(note, null);
+			noteService.addNote(note, null);			
 		}
 	}
 
 	@Test
 	public void getTenNoteByTime() throws Exception {
-		System.out.println(noteService.getTenNoteByTime(16, 0));
+		System.out.println(noteService.getTenNoteByTime(16, 26));
 	}
+	
+	@Test
+	public void testChangeSecond() throws Exception {
+		for(int i = 0; i < 5; i++){
+			Note note = new Note();
+			note.setUser_id(29);
+			note.setNickname("Huanglu");
+			note.setTarget_id(407);
+			note.setType(1);
+			System.out.println(noteService.changeSecond(note));
+		}
+	}
+	
+	@Test
+	public void testOnline() throws Exception {
+		System.out.println(userService.online(16));
+	}
+
+	@Test
+	public void findFans() throws Exception {
+		System.out.println(userDao.getAllFansId(29));
+	}
+	
+	@Test
+	public void testGetMore() throws Exception {
+		System.out.println(noteService.getMoreNote(16));
+	}
+
 }

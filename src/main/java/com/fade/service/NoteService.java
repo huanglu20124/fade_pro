@@ -11,4 +11,8 @@ public interface NoteService {
 
 	String getTenNoteByTime(Integer user_id, Integer start);
 
+	String getMoreNote(Integer user_id);
+
+	String changeSecond(Note note)throws FadeException;
+
 }

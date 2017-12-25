@@ -8,7 +8,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   <selectKey keyColumn="note_id" keyProperty="note_id" order="AFTER" resultType="Integer">
 	      SELECT LAST_INSERT_ID()
 	   </selectKey>
-	   insert into note values(null,#{user_id},#{note_content},#{post_time},0,0,0,1);
+	   insert into note values(null,#{user_id},#{note_content},#{post_time},0,0,0,1,#{target_id},#{type});
 	</insert>
 	
 	<!-- 批量插入图片 -->
@@ -28,29 +28,49 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	      </foreach> 
 	</update>
 	
-	<!-- 一次查找关注用户的一百条,活的帖子加入到队列里，比较用到转义字符 -->
-	<select id="getMuchNoteId" resultType="Integer">
+	<!-- 一次查找关注用户的一百条,活的帖子加入到队列里，比较用到转义字符  返回的Note仅仅包含note_id,target_id--> 
+	<select id="getMuchNoteId" resultType="Note">
 	    <if test="search_id != 0">
-	    	    select distinct b.note_id, b.note_content, b.user_id,
-	    	    b.post_time,b.comment_num,b.add_num,b.sub_num,b.is_die, c.nickname
-	    	    from relation a, note b, user c 
+	    	    select distinct b.note_id, b.target_id
+	    	    from relation a, note b
 	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or b.user_id=#{user_id})
 	                   and b.is_die=1 
-	                   and c.user_id=b.user_id
 	                   and b.note_id&lt;#{search_id}
 	                   order by note_id desc
 	            limit 0,100
 	    </if>
 	    
 	    <if test="search_id == 0">
-	    	    select distinct b.note_id, b.note_content, b.user_id,
-	    	    b.post_time,b.comment_num,b.add_num,b.sub_num,b.is_die,c.nickname
-	    	    from relation a, note b, user c
+	    	    select distinct b.note_id,b.target_id 
+	    	    from relation a, note b
 	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or b.user_id=#{user_id})
 	                   and b.is_die=1 
-	                   and c.user_id=b.user_id
 	                   order by note_id desc	                   
 	            limit 0,100	    
 	    </if>
+	</select>
+	
+	<!-- 更新加一秒的数量 -->
+	<update id="updateNoteAddNum">
+	    update note set add_num=#{add_num} where user_id=#{user_id}
+	</update>
+	
+	<!-- 更新减一秒的数量 -->
+	<update id="updateNoteSubNum">
+	    update set sub_num=#{sub_num} where user_id=#{user_id}
+	</update>
+	
+	<!-- 根据帖子id获取一个帖子全部内容，后期这个方法可能要缓存 -->
+	<select id="getNoteById" parameterType="Integer" resultType="Note">
+	    select b.user_id,b.note_id,b.note_content,b.post_time,b.comment_num,
+	           b.add_num, b.sub_num, b.is_die, b.target_id, b.type, a.nickname, a.head_image_url 
+	    from user a, note b
+	    where a.user_id=b.user_id and b.note_id=#{note_id}
+	</select>
+	
+	<!-- 获取type，查询是否操作过一个帖子 -->
+	<select id="getNoteCheckAction" resultType="Integer">
+	    select type from note where
+	        user_id=#{user_id} and target_id=#{note_id}
 	</select>
 </mapper>

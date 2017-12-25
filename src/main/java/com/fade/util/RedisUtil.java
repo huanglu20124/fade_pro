@@ -1,6 +1,9 @@
 package com.fade.util;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.data.redis.core.RedisTemplate;
@@ -61,12 +64,19 @@ public class RedisUtil{
 		return keys;
 	}
 	
-	
 	public void listLeftPush(String array_name,String value){
 		//插入到队列左边
 		redisTemplate.opsForList().leftPush(array_name, value);
 	}
 
+	public void listLeftPop(String array_name){
+		redisTemplate.opsForList().leftPop(array_name);
+	}
+	
+	public void listRightPop(String array_name){
+		redisTemplate.opsForList().rightPop(array_name);
+	}	
+	
 	public void listRightPush(String array_name,String value){
 		//插入到队列左边
 		redisTemplate.opsForList().rightPush(array_name, value);
@@ -82,5 +92,27 @@ public class RedisUtil{
 		redisTemplate.opsForZSet().add(key, value, score);
 	}
 	
+	public Long listGetSize(String key){
+		return redisTemplate.opsForList().size(key);
+	}
 
+	public void setAddKey(String key, Object...values){
+		redisTemplate.opsForSet().add(key, values);
+	}
+	
+	public Set<String> setGetAll(String key){
+		Set<Object>origin = redisTemplate.opsForSet().members(key);
+		Set<String>set = new HashSet<>();
+		Iterator<Object>iterator = origin.iterator();
+		while(iterator.hasNext()){
+			set.add((String)iterator.next());
+		}
+		return set;
+	}
+	
+	public Boolean setIsMember(String key, Object value){
+		return redisTemplate.opsForSet().isMember(key, value);
+	}
+	
+	
 }
