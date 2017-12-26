@@ -1,6 +1,10 @@
 package com.hl.test;
 
+import static org.junit.Assert.*;
+
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Resource;
 
@@ -125,7 +129,15 @@ public class UserTest extends BaseTest {
 	
 	@Test
 	public void testGetMore() throws Exception {
-		System.out.println(noteService.getMoreNote(16));
+		//System.out.println(noteService.getMoreNote(16));
+		Note note1 = new Note();
+		note1.setNote_id(1);
+		Note note2 = new Note();
+		note2.setNote_id(1);
+		System.out.println(note1.equals(note2));
+		Set<Note>set = new HashSet<>();
+		set.add(note1);
+		set.add(note2);
+		System.out.println(set);
 	}
-
 }

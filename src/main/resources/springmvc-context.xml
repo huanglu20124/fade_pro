@@ -65,11 +65,13 @@
 	       <mvc:exclude-mapping path="/registerByName"/>
 	       <mvc:exclude-mapping path="/loginUserByTel/*/*"/>
 	       <mvc:exclude-mapping path="/loginUserByName/*/*"/>
+	       <mvc:exclude-mapping path="/webSocketServer"/>
+	       <mvc:exclude-mapping path="/webSocketServer/sockjs"/>
 	       <bean class="com.fade.intercepter.AuthorizationInterceptor"></bean>
 	    </mvc:interceptor>
 	</mvc:interceptors> -->
 	
-	<!-- 对静态资源放行 -->
+	<!-- 对静态资源放行,image路径下因为配置了虚拟路径，无需再放行 -->
 	<mvc:resources location="/html/" mapping="/html/**" /> 
 	<mvc:resources location="/script/" mapping="/script/**" /> 
 </beans>

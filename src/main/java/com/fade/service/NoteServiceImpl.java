@@ -5,8 +5,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -253,16 +255,21 @@ public class NoteServiceImpl implements NoteService {
 	}
 
 	@Override
-	public String getMoreNote(Integer user_id) {
+	public String getMoreNote(Integer user_id, List<Note>update_list) {
 		//顶部下拉刷新
 		List<Note>add_notes = getAddNote(user_id);
 		if(add_notes.size() < 10){
 			List<Note>hot_notes = getHotNote(user_id);
 			if(hot_notes != null) add_notes.addAll(hot_notes);
 		}
-		//最后一个切面
+		//检查帖子是否点过赞
 		checkAction(add_notes, user_id);
-		return JSON.toJSONString(add_notes);
+		//返回更新信息
+		Set<Note>set = checkIsDie(update_list);
+		Map<String, Object>map = new HashMap<>();
+		map.put("add_list",add_notes);
+		map.put("update_list",set);
+		return JSON.toJSONString(map);
 	}
 	 
 	private List<Note> getHotNote(Integer user_id) {
@@ -391,5 +398,44 @@ public class NoteServiceImpl implements NoteService {
 				note.setAction(2);
 			}
 		}
+	}
+	
+	private Set<Note> checkIsDie(List<Note>update_list){
+		//返回list，前端变成set进行判断
+		Set<Note>ans_notes = new HashSet<>();
+		Note note = null;
+		String note_str = null;
+		Note origin = null;
+		for(Note temp : update_list){
+			 if(temp.getTarget_id() != null){
+				 //假如是转发的,更新的是origin的信息
+				 note = new Note();
+				 note.setNote_id(temp.getTarget_id());
+				 if(ans_notes.contains(note)) continue; //包含的话不再从redis中取
+				 else {
+					note_str = (String) redisUtil.getValue("note_" + temp.getTarget_id());
+					if(note_str != null){
+						//还存活
+						origin = JSON.parseObject(note_str, Note.class);
+						note.setAdd_num(origin.getAdd_num());
+						note.setSub_num(origin.getSub_num());
+						note.setComment_num(origin.getComment_num());
+						ans_notes.add(note);
+					}
+				}
+			 }else {
+				 note_str = (String)redisUtil.getValue("note_" + temp.getNote_id());
+				 if(note_str != null){
+					 origin = JSON.parseObject(note_str, Note.class);
+					 note = new Note();
+					 note.setNote_id(origin.getNote_id());
+					 note.setAdd_num(origin.getAdd_num());
+					 note.setSub_num(origin.getSub_num());
+					 note.setComment_num(origin.getComment_num());
+					 ans_notes.add(note);
+				 }
+			}
+		}
+		return ans_notes;
 	}
 }

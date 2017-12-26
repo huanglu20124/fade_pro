@@ -1,6 +1,7 @@
 package com.fade.controller;
 
 import javax.annotation.Resource;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,11 +36,11 @@ public class NoteController {
 		return noteService.getTenNoteByTime(user_id,start);
 	}
 	
-	@RequestMapping(value = "/getMoreNote/{user_id}", method = RequestMethod.GET)
+	@RequestMapping(value = "/getMoreNote/{user_id}/{update_list}", method = RequestMethod.GET)
 	@ResponseBody
-	public String getMoreNote(@PathVariable("user_id")Integer user_id){
-		//顶部下拉刷新
-		return noteService.getMoreNote(user_id);
+	public String getMoreNote(@PathVariable("user_id")Integer user_id, @PathVariable("update_list")String update_list){
+		//顶部下拉刷新，同时更新之前发过的帖子的信息,update_list的一项要包含note_id,target_id
+		return noteService.getMoreNote(user_id,JSON.parseArray(update_list, Note.class));
 	}	
 
 	@RequestMapping(value = "/changeSecond", method = RequestMethod.POST)

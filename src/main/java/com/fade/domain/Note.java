@@ -145,16 +145,29 @@ public class Note implements Serializable {
 	public void setType(Integer type) {
 		this.type = type;
 	}
-
 	
 	public Integer getAction() {
 		return action;
 	}
 
-	
 	public void setAction(Integer action) {
 		this.action = action;
 	}
 
+	//如果note_id相等，则两个帖子相等
+	@Override
+	public int hashCode() {
+		if(note_id != null) return note_id.hashCode();
+		else return 0;
+	}
 	
+	@Override
+	public boolean equals(Object obj) {
+		Note note = (Note) obj;
+		if(this.note_id == note.getNote_id()){
+			return true;
+		}else {
+			return false;
+		}
+	}
 }
