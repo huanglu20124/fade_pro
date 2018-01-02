@@ -1,21 +1,21 @@
 package com.fade.domain;
 
 import java.io.Serializable;
+import java.util.List;
 
-public class Comment extends SimpleResponse implements Serializable{
+public class Comment implements Serializable{
+	//一级评论
 
 	private static final long serialVersionUID = -2152733214028496361L;
 	private Integer comment_id;           
 	private Integer user_id;             
 	private String  nickname;            
-	private String  head_image_url;      
-	private Integer to_comment_id;          
-	 
+	private String  head_image_url;      	 
 	private Integer note_id;          
 	private String comment_time;      
-	private String comment_content;     
-	private Integer comment_good_num;  
-	
+	private String comment_content;
+	private List<SecondComment>comments;//二级评论列表
+	private Integer type; //0代表增秒评论，1代表减秒评论
 
 	public Integer getComment_id() {
 		return comment_id;
@@ -50,12 +50,6 @@ public class Comment extends SimpleResponse implements Serializable{
 	public String getComment_time() {
 		return comment_time;
 	}
-	public Integer getTo_comment_id() {
-		return to_comment_id;
-	}
-	public void setTo_comment_id(Integer to_comment_id) {
-		this.to_comment_id = to_comment_id;
-	}
 	public void setComment_time(String comment_time) {
 		this.comment_time = comment_time;
 	}
@@ -65,12 +59,20 @@ public class Comment extends SimpleResponse implements Serializable{
 	public void setComment_content(String comment_content) {
 		this.comment_content = comment_content;
 	}
-	public Integer getComment_good_num() {
-		return comment_good_num;
+	public List<SecondComment> getComments() {
+		return comments;
 	}
-	public void setComment_good_num(Integer comment_good_num) {
-		this.comment_good_num = comment_good_num;
+	public void setComments(List<SecondComment> comments) {
+		this.comments = comments;
 	}
-
-	
+	public Integer getType() {
+		return type;
+	}
+	public void setType(Integer type) {
+		this.type = type;
+	}
+	@Override
+	public String toString() {
+		return "comment_id="+comment_id + ",comment_content="+comment_content;
+	}
 }

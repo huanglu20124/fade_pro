@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.apache.ibatis.annotations.Param;
 
+import com.fade.domain.Image;
 import com.fade.domain.Note;
 
 public interface NoteDao {
@@ -24,4 +25,22 @@ public interface NoteDao {
 	Note getNoteById(Integer note_id);
 	//获取type，查询是否操作过一个帖子
 	Integer getNoteCheckAction(@Param("user_id")Integer user_id,@Param("note_id")Integer note_id);
+	//获取十条增减秒，每个note包含有user_id,nickname,type
+	List<Note> getTenRelayNote(@Param("note_id")Integer note_id,@Param("page")Integer page);
+	//删除帖子
+	Integer deleteNote(Integer note_id);
+	//评论数量加一
+	Integer updateCommentNum(Integer note_id);
+	//找到用户所有活帖子的id
+	List<Integer> getUserLiveNote(Integer user_id);
+	//一次查找一百条,活的帖子加入到队列里,返回的Note仅仅包含note_id,target_id(仅限自己的)
+	List<Note> getMuchMyNoteId(@Param("user_id")Integer user_id,@Param("search_id")Integer search_id);
+	//嵌套查询，得到对该用户有“贡献”的帖子
+	List<Note> getAddContribute(@Param("user_id")Integer user_id, @Param("start")Integer start);
+	//得到个人主页的10条fade信息
+	List<Note> getMyNote(@Param("user_id")Integer user_id, @Param("start")Integer start);
+	//得到一个帖子有的全部图片
+	List<Image> getNoteImage(Integer note_id);
+	
+	
 }

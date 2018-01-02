@@ -106,4 +106,9 @@
 	<bean id="redisUtil" class="com.fade.util.RedisUtil">
 	   <property name="redisTemplate" ref="redisTemplate"></property>
 	</bean>
+	
+	<!-- solr专用 -->
+	<bean name="solrServer" class="org.apache.solr.client.solrj.impl.HttpSolrServer">
+	    <constructor-arg value="https://sysufade.cn/solr"></constructor-arg>
+	</bean>
 </beans>

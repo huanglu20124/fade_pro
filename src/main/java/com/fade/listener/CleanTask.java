@@ -32,7 +32,7 @@ public class CleanTask extends TimerTask{
 			die_ids.add(new Integer(id_str));
 		}
 		if(die_ids.size() > 0) noteDao.updateNoteDie(die_ids);
-		logger.info("清理完成，清理的帖子有" + die_list);
+		//logger.info("清理完成，清理的帖子有" + die_list);
 	}
 
 }

@@ -15,7 +15,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<insert id="addNoteImageBatch" parameterType="Note">
 	   insert into note_image values
 	   <foreach collection="images" item="item" index="index" separator=",">
-	      (null,#{item.image_url},#{item.note_id},#{item.image_size},#{item.image_coordinate},#{item.image_cut_size})
+	      (null,#{item.image_url},#{note_id},#{item.image_size},#{item.image_coordinate},#{item.image_cut_size})
 	   </foreach>
 	</insert>
 	
@@ -33,7 +33,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	    <if test="search_id != 0">
 	    	    select distinct b.note_id, b.target_id
 	    	    from relation a, note b
-	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or b.user_id=#{user_id})
+	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or (b.user_id=#{user_id} and b.target_id=0))
 	                   and b.is_die=1 
 	                   and b.note_id&lt;#{search_id}
 	                   order by note_id desc
@@ -43,7 +43,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	    <if test="search_id == 0">
 	    	    select distinct b.note_id,b.target_id 
 	    	    from relation a, note b
-	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or b.user_id=#{user_id})
+	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or (b.user_id=#{user_id} and b.target_id=0))
 	                   and b.is_die=1 
 	                   order by note_id desc	                   
 	            limit 0,100	    
@@ -57,7 +57,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	
 	<!-- 更新减一秒的数量 -->
 	<update id="updateNoteSubNum">
-	    update set sub_num=#{sub_num} where user_id=#{user_id}
+	    update note set sub_num=#{sub_num} where user_id=#{user_id}
 	</update>
 	
 	<!-- 根据帖子id获取一个帖子全部内容，后期这个方法可能要缓存 -->
@@ -72,5 +72,86 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<select id="getNoteCheckAction" resultType="Integer">
 	    select type from note where
 	        user_id=#{user_id} and target_id=#{note_id}
+	</select>
+	
+	<!-- 获取十条增减秒，每个note包含有user_id,nickname,type -->
+	<select id="getTenRelayNote" resultType="Note">
+	     select b.note_id, b.user_id,a.nickname,a.head_image_url,b.type
+	     from user a, note b
+	     where a.user_id=b.user_id and b.target_id=#{note_id}
+	     limit #{page},10
+	</select>
+	
+	<!-- 删除帖子 -->
+	<delete id="deleteNote" parameterType="Integer">
+	    delete from note where note_id=#{note_id}
+	</delete>
+	
+	<!-- 评论数量加一 -->
+	<update id="updateCommentNum" parameterType="Integer">
+	   update note set comment_num = comment_num + 1 where note_id=#{note_id}
+	</update>
+	
+	<!-- 找到用户所有活帖子的id -->
+	<select id="getUserLiveNote" parameterType="Integer" resultType="Integer">
+	   select note_id from note where user_id=#{user_id}
+	   and is_die=1
+	</select>
+	
+	<!-- 一次查找一百条,活的帖子加入到队列里,返回的Note仅仅包含note_id,target_id(仅限自己的)--> 
+	<select id="getMuchMyNoteId" resultType="Note">
+	    <if test="search_id != 0">
+	    	    select note_id, target_id
+	    	    from note 
+	            where  user_id=#{user_id}
+	                   and is_die=1 
+	                   and note_id&lt;#{search_id}
+	                   order by note_id desc
+	            limit 0,100
+	    </if>
+	    
+	    <if test="search_id == 0">
+	    	    select note_id, target_id
+	    	    from note 
+	            where  user_id=#{user_id}
+	                   and is_die=1 
+	                   order by note_id desc	                   
+	            limit 0,100	    
+	    </if>
+	</select>
+	
+	<!-- 嵌套查询，得到对该用户有“贡献”的帖子，一次十条-->
+	<select id="getAddContribute"  resultType="Note">
+	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type 
+	    from note a, user b
+	   where a.target_id in (
+	       select note_id from note where user_id=#{user_id}
+	   )
+	   <if test="start != 0">
+	      and a.note_id&lt;#{start}
+	   </if>
+	   and a.user_id=b.user_id
+	   and a.post_time>=(
+	      select addContributePoint from addmessage where user_id=#{user_id}
+	   )
+	   order by note_id desc
+	   limit 0,10
+	</select>	
+	
+	<!-- 得到个人主页的10条原创fade信息，从最新的开始-->
+   	<select id="getMyNote" resultType="Note">
+	   select * from note where user_id=#{user_id} 
+	   and target_id=0
+	   <if test="start != 0">
+	      and note_id&lt;#{start}
+	   </if>
+	   order by note_id desc
+	   limit 0,10
+	</select>
+	
+	<!-- 得到一个帖子有的全部图片 -->
+	<select id="getNoteImage" parameterType="Integer" resultType="Image">
+	   select * from note_image 
+	    where note_id=#{note_id}
 	</select>
 </mapper>

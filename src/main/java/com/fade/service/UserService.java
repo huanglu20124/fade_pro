@@ -28,5 +28,24 @@ public interface UserService {
 
 	String offline(Integer user_id);
 
+	String concern(Integer fans_id, Integer star_id);
+
+	String cancelConcern(Integer fans_id, Integer star_id);
+
+	String getPersonPage(Integer user_id, Integer my_id);
+
+	String getHeadImageUrl(User user);
+
+	String getAddMessage(Integer user_id);
+
+	String getAddContribute(Integer user_id,Integer start);
+
+	String getAddFans(Integer user_id, Integer start);
+
+	String getAddComment(Integer user_id, Integer start);
+
+	String searchUser(String keyword, Integer page);
+
+
 
 }

@@ -28,7 +28,7 @@ public class TimeUtil {
 
 	public static String getYearMonth(){
 		Date d = new Date();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy年MM月");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
 		String dateNowStr = sdf.format(d);
 		return dateNowStr;
 	}

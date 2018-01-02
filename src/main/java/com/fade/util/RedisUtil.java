@@ -69,6 +69,16 @@ public class RedisUtil{
 		redisTemplate.opsForList().leftPush(array_name, value);
 	}
 
+	public void listLeftPushAll(String array_name,Object...values){
+		//插入到队列左边
+		redisTemplate.opsForList().leftPushAll(array_name, values);
+	}
+
+	public void listRightPushAll(String array_name,List<String>values){
+		//插入到队列右边
+		redisTemplate.opsForList().rightPushAll(array_name, values);
+	}	
+	
 	public void listLeftPop(String array_name){
 		redisTemplate.opsForList().leftPop(array_name);
 	}
@@ -81,7 +91,7 @@ public class RedisUtil{
 		//插入到队列左边
 		redisTemplate.opsForList().rightPush(array_name, value);
 	}	
-	
+
 	public void listRemoveValue(String array_name,String value){
 		//删除队列中的元素
 		redisTemplate.opsForList().remove(array_name, 1, value);
@@ -92,11 +102,19 @@ public class RedisUtil{
 		redisTemplate.opsForZSet().add(key, value, score);
 	}
 	
+	public void zsetDeleteKey(String key, Object value){
+		redisTemplate.opsForZSet().remove(key, value);
+	}
+	
 	public Long listGetSize(String key){
 		return redisTemplate.opsForList().size(key);
 	}
 
-	public void setAddKey(String key, Object...values){
+	public void setAddKey(String key, Object values){
+		redisTemplate.opsForSet().add(key, values);
+	}
+	
+	public void setAddKeyMul(String key, Object... values){
 		redisTemplate.opsForSet().add(key, values);
 	}
 	
@@ -110,9 +128,16 @@ public class RedisUtil{
 		return set;
 	}
 	
-	public Boolean setIsMember(String key, Object value){
+	public Boolean setIsMember(String key, String value){
 		return redisTemplate.opsForSet().isMember(key, value);
 	}
 	
+	public void setKeyTime(String key,long timeout,TimeUnit unit){
+		redisTemplate.expire(key, timeout, unit);
+	}
+
+	public long getKeyTime(String key, TimeUnit unit){
+		return redisTemplate.getExpire(key, unit);
+	}
 	
 }

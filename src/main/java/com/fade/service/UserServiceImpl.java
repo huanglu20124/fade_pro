@@ -7,8 +7,10 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 
@@ -20,10 +22,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.alibaba.fastjson.JSON;
+import com.fade.domain.AddMessage;
+import com.fade.domain.Comment;
+import com.fade.domain.CommentQuery;
+import com.fade.domain.Image;
+import com.fade.domain.Note;
+import com.fade.domain.NoteQuery;
+import com.fade.domain.PersonPage;
 import com.fade.domain.SimpleResponse;
 import com.fade.domain.TokenModel;
 import com.fade.domain.User;
+import com.fade.domain.UserQuery;
 import com.fade.exception.FadeException;
+import com.fade.mapper.CommentDao;
+import com.fade.mapper.NoteDao;
 import com.fade.mapper.UserDao;
 import com.fade.util.Const;
 import com.fade.util.RedisUtil;
@@ -33,15 +45,25 @@ import com.fade.util.TokenUtil;
 @Service("userService")
 public class UserServiceImpl implements UserService {
 	public static Logger logger = Logger.getLogger(UserServiceImpl.class);
+	
 	@Autowired
 	private UserDao userDao;
 
+	@Resource(name = "noteDao")
+	private NoteDao noteDao;
+	
+	@Resource(name = "commentDao")
+	private CommentDao commentDao;
+	
 	@Resource(name = "redisUtil")
 	private RedisUtil redisUtil;
 
 	@Resource(name = "tokenUtil")
 	private TokenUtil tokenUtil;
 
+	@Resource(name = "solrService")
+	private SolrService solrService;
+	
 	@Override
 	public String getUserById(Integer user_id) throws FadeException {
 		// 返回用户详细信息
@@ -106,6 +128,9 @@ public class UserServiceImpl implements UserService {
 				String password_md5 = new Md5Hash(user.getPassword(), salt, 1).toString();
 				user.setPassword(password_md5);
 				userDao.addUser(user);// user_id设置到user对象中
+				//添加到索引数据库
+				user.setUuid(uuid);
+				solrService.solrAddUpdateUser(user);
 				// 新建tokenModel并返回
 				Map<String, Object> map = new HashMap<>();
 				TokenModel model = tokenUtil.createTokenModel(user.getUser_id());
@@ -175,6 +200,10 @@ public class UserServiceImpl implements UserService {
 		String password_md5 = new Md5Hash(user.getPassword(), salt, 1).toString();
 		user.setPassword(password_md5);
 		userDao.addUser(user);// 主键属性被自动赋予到user中
+		userDao.addMessage(user.getUser_id());//到新增消息队列里“注册”
+		//添加到solr数据库中
+		user.setUuid(uuid);
+		solrService.solrAddUpdateUser(user);
 		if(user.getUser_id() == null) throw new FadeException("注册失败");
 		logger.info("user_id=" + user.getUser_id() + ",nickname=" + user.getNickname() + " 注册成功");
 		// 把新建的盐写入盐表
@@ -188,6 +217,7 @@ public class UserServiceImpl implements UserService {
 		extra.put("tokenModel", model);
 		extra.put("register_time", user.getRegister_time());
 		extra.put("fade_name", user.getFade_name());
+		extra.put("head_image_url", user.getHead_image_url());
 		SimpleResponse response = new SimpleResponse("注册成功",null,extra);
 		//返回部分有用信息
 		return JSON.toJSONString(response);
@@ -195,7 +225,7 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public String loginUser(User user){
-		// 安卓端昵称密码的注册方式
+		// 安卓端昵称密码的登录方式
 		User ans_user = null;
 		String origin_password = null;
 		String md5_password = null;
@@ -225,28 +255,24 @@ public class UserServiceImpl implements UserService {
 				return JSON.toJSONString(new SimpleResponse(null, "账号不存在或密码错误！"));
 			}
 		}
-		if (ans_user == null)
-			return null;
-		else {
-			// 新建token并返回
-			Map<String, Object> map = new HashMap<>();
-			TokenModel model = tokenUtil.createTokenModel(ans_user.getUser_id());
-			map.put("tokenModel", model);
-			// 最后要还原密码
-			if (origin_password != null)
-				ans_user.setPassword(origin_password);
-			map.put("user", ans_user);
-			//redis上线
-			redisUtil.addKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
-			logger.info("user_id=" + ans_user.getUser_id() + ",nickname=" + ans_user.getNickname() + " 登录成功");
-			return JSON.toJSONString(map);
-		}
+
+		TokenModel model = tokenUtil.createTokenModel(ans_user.getUser_id());
+		ans_user.setTokenModel(model);
+		// 最后要还原密码
+		if (origin_password != null)
+			ans_user.setPassword(origin_password);
+		//redis上线
+		redisUtil.setAddKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
+		logger.info("user_id=" + ans_user.getUser_id() + ",nickname=" + ans_user.getNickname() + " 登录成功");
+		return JSON.toJSONString(ans_user);
 	}
 
 	@Override
 	public String updateUserById(User user,MultipartFile file) throws FadeException {
 		// 先得到原本的用户信息
 		User origin = userDao.getUserById(user.getUser_id());
+		String origin_nickname = origin.getNickname();
+		String origin_head_url = origin.getHead_image_url();
 		// 编辑用户信息(部分)，包括上传头像
 		if(file != null){
 			//先处理文件，找到原文件夹和文件，删除原图片，换新名字保存
@@ -272,7 +298,7 @@ public class UserServiceImpl implements UserService {
 				throw new FadeException("上传头像图片异常！");
 			}
 			String head_url = "image/head/" + TimeUtil.getYearMonth() + "/" + file_name + tail;
-			user.setHead_image_url(head_url);
+			origin.setHead_image_url(head_url);
 		}
 		if (user.getUser_id() == null)
 			throw new FadeException("user_id不能为空");
@@ -287,10 +313,37 @@ public class UserServiceImpl implements UserService {
 				origin.setSex(user.getSex());
 			if (user.getSummary() != null)
 				origin.setSummary(user.getSummary());
-			if (userDao.updateUserById(user) == 1) {
+			if (userDao.updateUserById(origin) == 1) {
+				//更新solr数据库
+				solrService.solrAddUpdateUser(origin);
+				//更新所有缓存中有关信息，假如改变了头像或昵称的话
+				if((!origin_nickname.equals(origin.getNickname())) 
+						|| (!origin_head_url.equals(origin.getHead_image_url()))){
+					//找到用户所有活帖子的id
+					List<Integer>live_ids = noteDao.getUserLiveNote(user.getUser_id());
+					String note_str = null;
+					String key = null;
+					for(Integer note_id : live_ids){
+						key = "note_" + note_id;
+						note_str = (String) redisUtil.getValue(key);
+						if(note_str != null){
+							//说明该帖子的确是活的
+							Note temp = JSON.parseObject(note_str, Note.class);
+							temp.setNickname(origin.getNickname());
+							temp.setHead_image_url(origin.getHead_image_url());
+							long time = redisUtil.getKeyTime(key, TimeUnit.MINUTES);
+							redisUtil.addKey(key, JSON.toJSONString(temp), time, TimeUnit.MINUTES);
+						}
+					}
+					//删除redis中所有该用户的一级评论
+					List<Integer>comment_ids = commentDao.getUserAllComment(origin.getUser_id());
+					for(Integer comment_id : comment_ids){
+						redisUtil.deleteKey("comment_" + comment_id) ;
+					}
+				}
 				logger.info("user_id=" + user.getUser_id() + ",nickname=" + user.getNickname() + "修改个人信息成功");
 				Map<String, Object>extra = new HashMap<>();
-				extra.put("head_image_url", user.getHead_image_url());
+				extra.put("head_image_url", origin.getHead_image_url());
 				//同时返回头像信息
 				return JSON.toJSONString(new SimpleResponse("修改成功！",null,extra));
 			} else {
@@ -327,15 +380,165 @@ public class UserServiceImpl implements UserService {
     @Override
 	public String online(Integer user_id) {
 		//用户上线后，加入到online_user里
-    	redisUtil.setAddKey(Const.ONLINE_USERS,"user_"+user_id);
-		return JSON.toJSONString(new SimpleResponse("上线成功",null));
+    	if(user_id != null){ 
+    		System.out.println(user_id + "请求上线");
+    		redisUtil.setAddKey(Const.ONLINE_USERS,"user_"+user_id.toString());
+    		return JSON.toJSONString(new SimpleResponse("上线成功",null));
+    	}else {
+    		return JSON.toJSONString(new SimpleResponse(null,"上线失败"));
+		}
+    	
 	}
 
 	@Override
 	public String offline(Integer user_id) {
 		//清除redis队列的缓存
-		redisUtil.deleteKey("list1_" + user_id);//首页队列
-		redisUtil.deleteKey("list2_" + user_id);//首页更新队列
+		if(user_id != null){
+			redisUtil.deleteKey("list1_" + user_id);//首页队列
+			redisUtil.deleteKey("list2_" + user_id);//首页更新队列
+		}
 		return JSON.toJSONString(new SimpleResponse("下线成功！", null));
+	}
+	
+	@Override
+	public String concern(Integer fans_id, Integer star_id) {
+		SimpleResponse response = new SimpleResponse();
+		if(userDao.addConcern(fans_id,star_id) != null){
+			response.setSuccess("关注成功！");
+			//关注数量+1
+			userDao.updateConcernNumPlus(fans_id);
+			//粉丝数量加一
+			userDao.updateFansNumPlus(star_id);
+		}else {
+			response.setErr("关注失败");
+		}
+		return JSON.toJSONString(response);
+	}
+	
+	@Override
+	public String cancelConcern(Integer fans_id, Integer star_id) {
+		SimpleResponse response = new SimpleResponse();
+		if(userDao.cancelConcern(fans_id,star_id) != null){
+			response.setSuccess("取消关注成功！");
+		}else {
+			response.setErr("取消关注失败");
+		}
+		return JSON.toJSONString(response);
+	}
+
+	@Override
+	public String getPersonPage(Integer user_id, Integer my_id) {
+		PersonPage page = new PersonPage();
+		User user = userDao.getSimpleUserById(user_id);//获取部分用户信息
+		page.setUser(user);
+		if(userDao.getRelation(user_id,my_id) != null){
+			page.setIsConcern(1);
+		}else {
+			page.setIsConcern(0);
+		}
+		NoteQuery query = new NoteQuery();
+		List<Note>notes = noteDao.getMyNote(user_id,0);
+		//图片数据
+		for(Note note : notes){
+			List<Image>images = noteDao.getNoteImage(note.getNote_id());
+			note.setImages(images);
+		}
+		checkAction(notes, user_id);
+		query.setList(notes);
+		query.setStart(notes.get(notes.size() -1).getNote_id());
+		return JSON.toJSONString(page);
+	}
+
+	@Override
+	public String getHeadImageUrl(User user) {
+		String head_image_url = null;
+		SimpleResponse response = new SimpleResponse();
+		if((head_image_url = userDao.getHeadImageUrl(user)) == null){
+			response.setErr("获取头像失败，账号可能不存在");
+		}else{
+			Map<String, Object>extra = new HashMap<>();
+			extra.put("head_image_url", head_image_url);
+			response.setExtra(extra);
+		}
+		return JSON.toJSONString(response);
+	}
+	
+	@Override
+	public String getAddMessage(Integer user_id) {
+		//获取通知的简要概括信息，增加的消息数量，用于消息页显示
+		AddMessage addMessage = userDao.getAddMessage(user_id);
+		if(addMessage != null) return JSON.toJSONString(addMessage);
+		return "{}";
+	}
+	
+	@Override
+	public String getAddContribute(Integer user_id,Integer start) {
+		//一次10条
+		List<Note>list = noteDao.getAddContribute(user_id,start);
+		//更新通知点
+		userDao.updateContributePoint(user_id,TimeUtil.getCurrentTime());
+		//初始通知数量为0
+		userDao.updateContributeZero(user_id);
+		NoteQuery query = new NoteQuery(); 
+		query.setList(list);
+		query.setStart(list.get(list.size() -1).getNote_id());
+		return JSON.toJSONString(query);
+	}
+
+	@Override
+	public String getAddFans(Integer user_id, Integer start) {
+		//一次10条
+		List<User>list = userDao.getAddFans(user_id,start);
+		//把数据库的该通知数量改为0,更新通知点
+		userDao.updateAddFans(user_id,TimeUtil.getCurrentTime());
+		UserQuery query = new UserQuery();
+		query.setStart(list.get(list.size() - 1).getRelation_id());
+		query.setList(list);
+		return JSON.toJSONString(query);
+	}
+	
+	@Override
+	public String getAddComment(Integer user_id, Integer start) {
+		//只返回一级评论,一次10条
+		List<Comment>list = commentDao.getAddComment(user_id,start);
+		//把数据库的该通知数量改为0,更新通知点
+		userDao.updateAddComment(user_id,TimeUtil.getCurrentTime());
+		CommentQuery query = new CommentQuery();
+		query.setList(list);
+		query.setStart(list.get(list.size() -1).getComment_id());
+		return JSON.toJSONString(query);
+	}
+
+	@Override
+	public String searchUser(String keyword, Integer page) {
+		//调用solr数据库，分页查询
+		List<User>users = solrService.getTenUserKeyword(keyword,page);
+		UserQuery query = new UserQuery();
+		query.setStart(++page);
+		query.setList(users);
+		return JSON.toJSONString(query);
+	}
+	
+	private void checkAction(List<Note>notes, Integer user_id){
+		//增加是否续或者减的属性
+		for(Note note : notes){
+			Integer type = null;
+			if(note.getTarget_id() != 0){
+				//转发帖，查询是否对原贴点赞
+				type = noteDao.getNoteCheckAction(user_id,note.getTarget_id());
+			}else {
+				type = noteDao.getNoteCheckAction(user_id,note.getNote_id());
+			}
+			if(type == null){
+				//还没操作过
+				note.setAction(0);
+			}else if (type == 1) {
+				//增
+				note.setAction(1);
+			}else if (type == 2) {
+				//减
+				note.setAction(2);
+			}
+		}
 	}
 }

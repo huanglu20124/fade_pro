@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import javax.annotation.Resource;
 import org.springframework.stereotype.Component;
+
 import com.fade.domain.TokenModel;
 
 @Component("tokenUtil")

@@ -25,7 +25,7 @@
 
     <!-- 每隔一段时间清理die_list中的帖子的监听器 -->
     <listener>
-        <listener-class>com.fade.listener.CleanListener</listener-class>
+        <listener-class>com.fade.listener.FadeListener</listener-class>
     </listener>
     
 	<!-- spring MVC相关 -->

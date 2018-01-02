@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fade.mapper.CommentDao">
+    <!-- 获取比search_id大的num个评论 -->
+	<select id="getTenComment" resultType="Comment">
+	    select a.nickname, a.head_image_url, b.*
+	    from user a, comment b
+	    where a.user_id=b.user_id and b.note_id=#{note_id}
+	    and b.comment_id > #{search_id}
+	    limit 0,#{num}
+	</select>
+	
+	<!-- 获取一个评论的所有二级评论 -->
+	<select id="getSecondComment" resultType="SecondComment" parameterType="Integer">
+	   select a.nickname,b.*, c.nickname as to_nickname 
+	   from user a, second_comment b, user c
+	   where a.user_id=b.user_id 
+	   and b.comment_id=#{comment_id} 
+	   and c.user_id=b.to_user_id
+	</select>
+	
+	<!-- 根据评论id获取一条评论 -->
+	<select id="getCommentById" parameterType="Integer" resultType="Comment">
+	   select a.nickname,a.head_image_url, b.*
+	   from user a, comment b
+	   where a.user_id=b.user_id and b.comment_id=#{comment_id}
+	</select>
+	
+	<!-- 添加一条一级评论-->
+	<insert id="addComment" parameterType="Comment">
+	   <selectKey keyColumn="comment_id" keyProperty="comment_id" order="AFTER" resultType="Integer">
+	      SELECT LAST_INSERT_ID()
+	   </selectKey>
+	   insert into comment values(null,#{user_id},#{note_id},#{comment_time},#{comment_content},#{type});
+	</insert>
+	
+	<!-- 添加一条二级评论 -->
+	<insert id="addSecondComment" parameterType="SecondComment">
+	   <selectKey keyColumn="second_id" keyProperty="second_id" order="AFTER" resultType="Integer">
+	      SELECT LAST_INSERT_ID()
+	   </selectKey>
+	   insert into second_comment values(null,#{user_id},#{comment_id},#{to_user_id},#{comment_time},#{comment_content});
+	</insert>
+	
+	<!-- 获得一个用户的所有一级评论的id -->
+	<select id="getUserAllComment" parameterType="Integer" resultType="Integer">
+	    select comment_id from comment where user_id=#{user_id}
+	</select>
+	
+	<!-- 用于通知页只返回一级评论,一次10条 -->
+	<select id="getAddComment"  resultType="Comment">
+	    select a.user_id,a.head_image_url,a.nickname,b.comment_content,b.comment_time
+	    from user a, comment b
+	    where b.note_id in (
+	       select note_id from note where user_id=#{user_id}
+	    )
+	   <if test="start != 0">
+	      b.comment_id&lt;#{start} 
+	   </if> 
+	   and b.comment_time>=(
+	      select addCommentPoint from addmessage where user_id=#{user_id}
+	   )
+	   and a.user_id=b.user_id
+	   order by comment_id desc
+	   limit 0,10
+	</select>
+</mapper>

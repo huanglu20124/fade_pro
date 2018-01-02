@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper
-PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
-"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.fade.mapper.UserDao">
 	<!-- 通过id获取用户 -->
 	<select id="getUserById" parameterType="Integer" resultType="User">
-		select * from user
+		select user_id, telephone, fade_name, nickname, password,
+		 sex,head_image_url,register_time, summary, wechat_id, weibo_id,
+		 qq_id,concern_num, fans_num, fade_num, area,wallpaper_url, school, uuid
+		from user
 		<where>
 		user_id=#{user_id}
 		</where>
@@ -20,7 +22,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	                           #{sex},#{head_image_url},#{register_time},#{summary},
 	                           #{wechat_id},#{weibo_id},#{qq_id},0,
 	                           0,0,#{area},#{wallpaper_url},
-	                           #{school})
+	                           #{school}, #{uuid})
 	</insert>
 	
 	<!-- 编辑用户昵称 -->
@@ -78,7 +80,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	<!-- 编辑用户信息(部分) -->
 	<update id="updateUserById" parameterType="User">
 	    update user set
-	      nickname=#{nickname},area=#{area},school=#{school},sex=#{sex},summary=#{summary}
+	      nickname=#{nickname},area=#{area},school=#{school},sex=#{sex},summary=#{summary},head_image_url=#{head_image_url}
 	        where user_id=#{user_id}
 	</update>
 	
@@ -107,4 +109,106 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	      a.user_id=b.user_fans and b.user_star=#{user_id} 
 	</select>
 	
+	<!-- 关注某人 -->
+	<insert id="addConcern">
+	   insert into relation values(null,#{star_id},#{fans_id},null)
+	</insert>
+
+	<!-- 取消关注某人 -->
+	<insert id="cancelConcern">
+	   delete from relation where user_star=#{star_id} and user_fans=#{fans_id}
+	</insert>
+	
+	<!-- 用于详情页，得到部分用户信息 -->
+	<select id="getSimpleUserById" parameterType="Integer" resultType="User">
+	   select user_id, fade_name, nickname,head_image_url, sex, register_time,
+	   summary,concern_num,fans_num,fade_num,area,wallpaper_url,school
+	   from user
+	   where user_id=#{user_id}
+	</select>
+	
+	<!--获取是否关注某人-->
+	<select id="getRelation" resultType="Integer">
+	   select relation_id from relation
+	   where user_star=#{user_id} and user_fans=#{my_id}
+	</select>
+	
+	<!-- 获取头像url -->
+	<select id="getHeadImageUrl"  parameterType="User"  resultType="String">
+	   select head_image_url from user  
+	   <if test="telephone != null">
+	       where telephone=#{telephone}
+	   </if>
+	   <if test="fade_name != null">
+	       where fade_name=#{fade_name}
+	   </if>
+	   <if test="wechat_id != null">
+	       where wechat_id=#{wechat_id}
+	   </if>	   
+	</select>	
+	
+	<!-- 新增消息数量 -->
+	<select id="getAddMessage" parameterType="Integer" resultType="AddMessage">
+	   select user_id, addContributeNum,addFansNum,addCommentNum 
+	   from addmessage 
+	   where user_id=#{user_id}
+	</select>
+	
+	<!-- 新建到新增消息队列里“注册” -->
+	<insert id="addMessage" parameterType="Integer">
+	   insert into addmessage values(null,#{user_id},0,null,0,null,0,null);
+	</insert>
+	
+	<!-- 更新通知点 -->
+	<update id="updateContributePoint">
+	    update addmessage set addContributePoint=#{addContributePoint} 
+	    where user_id=#{user_id}
+	</update>
+	
+	<!--通知相关：  通知数量改为0 -->
+	<update id="updateContributeZero">
+	    update addmessage set addContributeNum=0
+	    where user_id=#{user_id}
+	</update>	
+	<!-- 通知相关： 获取十个新增粉丝 -->
+	<select id="getAddFans" resultType="User">
+	    select a.user_id, a.nickname, a.head_image_url, b.relation_time, b.relation_id
+	    from user a, relation b where 
+	   <if test="start != 0">
+	      b.relation_id&lt;#{start} and 
+	   </if> 
+	   	   b.relation_time >=(
+	      select addFansPoint from addmessage where user_id=#{user_id}
+	   )
+	   and b.user_fans=a.user_id
+	   and b.user_star=#{user_id}
+	   order by relation_time desc
+	   limit 0,10
+	</select>
+	
+	<!-- 通知相关： 粉丝队列通知数量改为0,更新通知点 -->
+	<update id="updateAddFans">
+	    update addmessage set addFansNum=0 and addFansPoint=#{addFansPoint} 
+	    where user_id=#{user_id}
+	</update>	
+	
+	<!-- fade数量加一 -->
+	<update id="updateFadeNumPlus" parameterType="Integer">
+	   update user set fade_num=fade_num+1 where user_id=#{user_id}
+	</update>
+	
+	<!-- 关注数量+1 -->
+	<update id="updateConcernNumPlus" parameterType="Integer">
+	   update user set concern_num=concern_num+1 where user_id=#{fans_id}
+	</update>
+	
+	<!-- 粉丝数量加一 -->
+	<update id="updateFansNumPlus" parameterType="Integer">
+	   update user set fans_num=fans_num+1 where user_id=#{star_id}
+	</update>
+	
+	<!--通知相关： 原主人的通知数量+1 -->
+	<update id="updateContributePlus" parameterType="Integer">
+	   update addmessage set addContributeNum=addContributeNum+1 where user_id=#{user_id}
+	</update>
 </mapper>

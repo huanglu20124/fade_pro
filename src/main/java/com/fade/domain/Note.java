@@ -5,7 +5,8 @@ import java.util.List;
 
 public class Note implements Serializable {
 	/**
-	 * 帖子表
+	 * 帖子
+	 * 如果是转发贴（target_id不为0的话，显示的续秒数、减秒数、评论数都是原贴origin的）
 	 */
 	private static final long serialVersionUID = 3337872547982353088L;
 	private Integer note_id;
@@ -14,20 +15,35 @@ public class Note implements Serializable {
 	private String head_image_url;
 
 	private String note_content;
-	private String post_time;
-	private Integer is_die;
+	private String post_time;       //发布时间
+	private Integer is_die;         //是否死亡
 
-	private Integer comment_num;
-	private Integer sub_num;
-	private Integer add_num;
-	private Integer target_id;
-	private Integer type;//代表帖子是增/减/原创, 1/2/0
-	private Integer action;//动作，0为没动作，1为对这个帖子增过，0为对这个帖子减过
+	private Integer comment_num;    //评论数量
+	private Integer sub_num;        //减一秒数量
+	private Integer add_num;        //增一秒数量
+	private Integer target_id;      //代表原贴id（不为0的话）
+	private Integer type;           //代表帖子是增/减/原创, 1/2/0
+	private Integer action;         //动作，0为没动作，1为对这个帖子增过，0为对这个帖子减过
+	
+	private Long fetchTime;//给客户端的此刻时间
 
-	private List<Image> images;// 图片集合
+	private List<Image> images;     // 图片集合
 
 	private Note origin;// 原贴
 
+	private Integer baseComment_num; //一级评论数量，后端缓存判断用到，数据库不保存
+	
+	public Note() {
+		this.comment_num = 0;
+		this.add_num = 0;
+		this.sub_num = 0;
+		this.target_id = 0;
+		this.type = 0;
+		this.action = 0;
+		this.baseComment_num = 0;
+		this.is_die = 1;
+	}
+	
 	public Integer getNote_id() {
 		return note_id;
 	}
@@ -152,6 +168,23 @@ public class Note implements Serializable {
 
 	public void setAction(Integer action) {
 		this.action = action;
+	}
+
+	public Integer getBaseComment_num() {
+		return baseComment_num;
+	}
+
+	public void setBaseComment_num(Integer baseComment_num) {
+		this.baseComment_num = baseComment_num;
+	}
+
+	
+	public Long getFetchTime() {
+		return fetchTime;
+	}
+
+	public void setFetchTime(Long fetchTime) {
+		this.fetchTime = fetchTime;
 	}
 
 	//如果note_id相等，则两个帖子相等

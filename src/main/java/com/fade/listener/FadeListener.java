@@ -1,5 +1,6 @@
 package com.fade.listener;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import org.apache.log4j.Logger;
@@ -10,25 +11,30 @@ import com.fade.mapper.NoteDao;
 import com.fade.util.RedisUtil;
 
 
-public class CleanListener implements ServletContextListener{
+public class FadeListener implements ServletContextListener{
 
-	private static Logger logger = Logger.getLogger(CleanListener.class);
-	private CleanTimer timer;
-	
+	private static Logger logger = Logger.getLogger(FadeListener.class);
+	private CleanTimer cleanTimer;//死亡帖子清理器，1分钟一次
+	private DataTimer dataTimer;//数据集更新器，15分钟一次
+	private ServletContext servletContext; 
 	@Override
 	public void contextInitialized(ServletContextEvent sce) {
-		logger.info("帖子清理监听器启动");
+		logger.info("Fade总监听器启动");
+		servletContext = sce.getServletContext();
 		ApplicationContext applicationContext = WebApplicationContextUtils.
 				getRequiredWebApplicationContext(sce.getServletContext());
 		RedisUtil redisUtil = (RedisUtil) applicationContext.getBean("redisUtil");
 		NoteDao noteDao = (NoteDao) applicationContext.getBean("noteDao");
-		timer = new CleanTimer(noteDao,redisUtil, logger);
-		timer.startTimer();
+		cleanTimer = new CleanTimer(noteDao,redisUtil, logger);
+		cleanTimer.startTimer();
+		dataTimer = new DataTimer(servletContext, logger);
+		dataTimer.startTimer();
 	}
 
 	@Override
 	public void contextDestroyed(ServletContextEvent sce) {
-		timer.stopTimer();
+		cleanTimer.stopTimer();
+		dataTimer.stopTimer();
 	}
 
 }
