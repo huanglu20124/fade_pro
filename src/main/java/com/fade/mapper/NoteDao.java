@@ -35,12 +35,15 @@ public interface NoteDao {
 	List<Integer> getUserLiveNote(Integer user_id);
 	//一次查找一百条,活的帖子加入到队列里,返回的Note仅仅包含note_id,target_id(仅限自己的)
 	List<Note> getMuchMyNoteId(@Param("user_id")Integer user_id,@Param("search_id")Integer search_id);
-	//嵌套查询，得到对该用户有“贡献”的帖子
-	List<Note> getAddContribute(@Param("user_id")Integer user_id, @Param("start")Integer start);
+
 	//得到个人主页的10条fade信息
 	List<Note> getMyNote(@Param("user_id")Integer user_id, @Param("start")Integer start);
 	//得到一个帖子有的全部图片
 	List<Image> getNoteImage(Integer note_id);
+	//续秒前检查是否已经续过
+	Integer getNoteQueryChangeSecond(@Param("user_id")Integer user_id, @Param("target_id")Integer target_id);
+	//添加一张示例图片，用于通知显示
+	String getOneImage(Integer note_id);
 	
 	
 }

@@ -16,6 +16,8 @@ public class Comment implements Serializable{
 	private String comment_content;
 	private List<SecondComment>comments;//二级评论列表
 	private Integer type; //0代表增秒评论，1代表减秒评论
+	
+	private String exampleImage;//示例图片
 
 	public Integer getComment_id() {
 		return comment_id;

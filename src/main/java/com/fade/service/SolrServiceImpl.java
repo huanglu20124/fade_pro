@@ -41,8 +41,8 @@ public class SolrServiceImpl implements SolrService {
 		document.setField("fans_num", user.getFans_num());
 		document.setField("fade_num", user.getFade_num());
 		document.setField("area", user.getArea());
-		document.setField("wallpaper_url", user.getWallpaper_url());
-		document.setField("school", user.getSchool());
+		document.setField("school_id", user.getSchool_id());
+		document.setField("school_name", user.getSchool_name());
 		document.setField("id", user.getUuid());
 		document.setField("fade_name", user.getFade_name());
 		try {
@@ -62,7 +62,7 @@ public class SolrServiceImpl implements SolrService {
 	public List<User> getTenUserKeyword(String keyword, Integer page) {
 		//调用solr数据库，分页查询
 		SolrQuery solrQuery = new SolrQuery();
-		solrQuery.setQuery("nickname:" + keyword + " or " + "fade_name:" + keyword);
+		solrQuery.setQuery("user_keyword:" + keyword);
 		//设置默认域
 		//solrQuery.set("df", "user_keyword");
 		solrQuery.setStart(page * 10);
@@ -91,7 +91,8 @@ public class SolrServiceImpl implements SolrService {
 			user.setFans_num((Integer) document.get("fans_num"));
 			user.setHead_image_url((String) document.get("head_image_url"));
 			user.setRegister_time((String) document.get("register_time"));
-			user.setSchool((String) document.get("school"));
+			user.setSchool_id((Integer)document.get("school_id"));
+			user.setSchool_name((String) document.get("school_name"));
 			user.setSex((String) document.get("sex"));
 			user.setSummary((String) document.get("summary"));
 			user.setUuid((String) document.get("id"));

@@ -140,4 +140,22 @@ public class RedisUtil{
 		return redisTemplate.getExpire(key, unit);
 	}
 	
+	public boolean setIsContain(String key,Object value){
+		return redisTemplate.opsForSet().isMember(key, value);
+	}
+	
+	public void setRemove(String key,Object value){
+		redisTemplate.opsForSet().remove(key,value);
+	}
+	
+	public List<String> zsetRange(String key ,long start, long end){
+		Set<Object>set =  redisTemplate.opsForZSet().reverseRange(key, start, end);
+		List<String>list = new ArrayList<>();
+		Iterator<Object>iterator = set.iterator();
+		while (iterator.hasNext()) {
+			String value = (String) iterator.next();
+			list.add(value);
+		}
+		return list;
+	}
 }

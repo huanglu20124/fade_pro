@@ -4,12 +4,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 <mapper namespace="com.fade.mapper.UserDao">
 	<!-- 通过id获取用户 -->
 	<select id="getUserById" parameterType="Integer" resultType="User">
-		select user_id, telephone, fade_name, nickname, password,
-		 sex,head_image_url,register_time, summary, wechat_id, weibo_id,
-		 qq_id,concern_num, fans_num, fade_num, area,wallpaper_url, school, uuid
-		from user
+		select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
+		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
+		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
+		 b.school_name
+		from user a, school b
 		<where>
-		user_id=#{user_id}
+		a.user_id=#{user_id}
+		and a.school_id=b.school_id
 		</where>
 	</select>
 	
@@ -21,8 +23,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   insert into user values(null,#{telephone},#{fade_name},#{nickname},#{password},
 	                           #{sex},#{head_image_url},#{register_time},#{summary},
 	                           #{wechat_id},#{weibo_id},#{qq_id},0,
-	                           0,0,#{area},#{wallpaper_url},
-	                           #{school}, #{uuid})
+	                           0,0,#{area}, #{uuid},
+	                           #{salt},#{school_id},
+	                           null,null)
 	</insert>
 	
 	<!-- 编辑用户昵称 -->
@@ -48,60 +51,79 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	
 	<!-- 通过手机和密码登录 -->
 	<select id="getUserByTelPwd" parameterType="User" resultType="User">
-	   select * from user where telephone=#{telephone} and password=#{password}
+		 select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
+		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
+		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
+		 b.school_name
+		from user a, school b
+	    where 
+	    a.telephone=#{telephone} and a.password=#{password}
 	</select>
 	
 	<!-- 通过fade账号和密码登录 -->
 	<select id="getUserByFadePwd" parameterType="User" resultType="User">
-	   select * from user where fade_name=#{fade_name} and password=#{password}
+		 select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
+		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
+		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
+		 b.school_name
+		from user a, school b 
+	    where 
+	    fade_name=#{fade_name} and password=#{password}
 	</select>
 	
-	<!-- 查询openid是否被注册 -->
+
+	<!-- 第三方登录之后，获取全部用户信息 -->
 	<select id="getUserByOpenId" resultType="User">
-	   select user_id from user
-	   <where>
+		select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
+		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
+		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
+		 b.school_name
+		from user a, school b
+	    <where>
+	      a.school_id=b.school_id
+	      and
 	      <if test="type == 0">
-	          wechat_id=#{wechat_id}
+	          a.wechat_id=#{open_id}
 	      </if>
 	      <if test="type == 1">
-	          wechat_id=#{weibo_id}
+	          a.weibo_id=#{open_id}
 	      </if>	
 	      <if test="type == 2">
-	          wechat_id=#{qq_id}
+	          a.qq_id=#{open_id}
 	      </if>		            
 	   </where>
 	</select>
-	
+		
 	<!-- 根据fade_name查询用户 -->
 	<select id="getUserByFadeName" parameterType="String" resultType="User">
-	    select * from user where fade_name=#{fade_name}
+		select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
+		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
+		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
+		 b.school_name
+		from user a, school b
+	    where
+	    a.school_id=b.school_id
+	    and fade_name=#{fade_name}
 	</select>
 	
 	<!-- 编辑用户信息(部分) -->
 	<update id="updateUserById" parameterType="User">
 	    update user set
-	      nickname=#{nickname},area=#{area},school=#{school},sex=#{sex},summary=#{summary},head_image_url=#{head_image_url}
+	      nickname=#{nickname},area=#{area},school_id=#{school_id},sex=#{sex},summary=#{summary},head_image_url=#{head_image_url}
 	        where user_id=#{user_id}
 	</update>
 	
 	<!-- 根据电话获取用户的盐 -->
 	<select id="getSaltByTel" parameterType="String" resultType="String">
-	    select b.salt from user a, user_salt b
-	      where a.telephone=#{telephone}
-	            and a.user_id=b.user_id
+	    select salt from user a
+	      where telephone=#{telephone}
 	</select>
 	
 	<!-- 根据fade_name获取用户的盐 -->
 	<select id="getSaltByFadeName" parameterType="String" resultType="String">
-	    select b.salt from user a, user_salt b
-	      where a.fade_name=#{fade_name}
-	            and a.user_id=b.user_id
+	    select salt from user a
+	      where fade_name=#{fade_name}
 	</select>
-	
-	<!-- 新增盐 -->
-	<insert id="addSalt">
-	   insert into user_salt values(null,#{user_id},#{salt});
-	</insert>
 	
 	<!-- 查询所有粉丝 -->
 	<select id="getAllFansId" parameterType="Integer" resultType="Integer">
@@ -115,16 +137,19 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	</insert>
 
 	<!-- 取消关注某人 -->
-	<insert id="cancelConcern">
+	<delete id="cancelConcern">
 	   delete from relation where user_star=#{star_id} and user_fans=#{fans_id}
-	</insert>
+	</delete>
 	
 	<!-- 用于详情页，得到部分用户信息 -->
 	<select id="getSimpleUserById" parameterType="Integer" resultType="User">
-	   select user_id, fade_name, nickname,head_image_url, sex, register_time,
-	   summary,concern_num,fans_num,fade_num,area,wallpaper_url,school
-	   from user
-	   where user_id=#{user_id}
+		select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
+		 a.sex,a.head_image_url,a.register_time, a.summary, a.concern_num, a.fans_num,
+		  a.fade_num, a.area, a.school_id, a.uuid, b.school_name
+		from user a, school b
+	    where
+	    a.school_id=b.school_id
+	    and a.user_id=#{user_id}
 	</select>
 	
 	<!--获取是否关注某人-->
@@ -158,40 +183,133 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<insert id="addMessage" parameterType="Integer">
 	   insert into addmessage values(null,#{user_id},0,null,0,null,0,null);
 	</insert>
+
+	<!-- 查询时间点,type=0,1,2分别为贡献，粉丝，评论 -->
+	<select id="getAddPoint" resultType="String">
+	   select 
+	   <if test="type==0">
+	       addContributePoint
+	   </if>
+	   <if test="type==1">
+	       addFansPoint
+	   </if>
+	   <if test="type==2">
+	       addCommentPoint
+	   </if>
+	   from addmessage where user_id=#{user_id}	   	   
+	</select>
 	
-	<!-- 更新通知点 -->
-	<update id="updateContributePoint">
-	    update addmessage set addContributePoint=#{addContributePoint} 
-	    where user_id=#{user_id}
+	<!-- 初始化队列，type=0,1,2分别为贡献，粉丝，评论 -->
+	<update id="initAddMessage">
+	    update addmessage 
+	    <if test="type==0">
+	       set addContributePoint=null, addContributeNum=0
+	    </if>
+	    
+	    <if test="type==1">
+	       set addFansPoint=null, addFansNum=0
+	    </if>	
+
+	    <if test="type==2">
+	      set addCommentPoint=null, addCommentNum=0
+	    </if>
+	    
+	    where user_id=#{user_id}	        
 	</update>
-	
-	<!--通知相关：  通知数量改为0 -->
-	<update id="updateContributeZero">
-	    update addmessage set addContributeNum=0
-	    where user_id=#{user_id}
-	</update>	
-	<!-- 通知相关： 获取十个新增粉丝 -->
+		
+	<!-- 通知相关： 获取新增粉丝 -->
 	<select id="getAddFans" resultType="User">
 	    select a.user_id, a.nickname, a.head_image_url, b.relation_time, b.relation_id
 	    from user a, relation b where 
 	   <if test="start != 0">
 	      b.relation_id&lt;#{start} and 
 	   </if> 
-	   	   b.relation_time >=(
-	      select addFansPoint from addmessage where user_id=#{user_id}
-	   )
+	   b.relation_time>=#{point}
 	   and b.user_fans=a.user_id
 	   and b.user_star=#{user_id}
 	   order by relation_time desc
-	   limit 0,10
+	   limit 0,20
+	</select>
+
+	<!-- 获取新增贡献，嵌套查询，得到对该用户有“贡献”的帖子-->
+	<select id="getAddContribute"  resultType="Note">
+	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type 
+	    from note a, user b
+	   where a.target_id in (
+	       select note_id from note where user_id=#{user_id}
+	   )
+	   <if test="start != 0">
+	      and a.note_id&lt;#{start}
+	   </if>
+	   and a.user_id=b.user_id
+	   and a.post_time>=#{point}
+	   order by note_id desc
+	   limit 0,20
 	</select>
 	
-	<!-- 通知相关： 粉丝队列通知数量改为0,更新通知点 -->
-	<update id="updateAddFans">
-	    update addmessage set addFansNum=0 and addFansPoint=#{addFansPoint} 
-	    where user_id=#{user_id}
-	</update>	
+
+	<!-- 获取新增评论，用于通知页只返回一级评论 -->
+	<select id="getAddComment"  resultType="Comment">
+	    select a.user_id,a.head_image_url,a.nickname,b.comment_content,b.comment_time,b.comment_id
+	    from user a, comment b
+	    where b.note_id in (
+	       select note_id from note where user_id=#{user_id}
+	    )
+	   <if test="start != 0">
+	      and b.comment_id&lt;#{start} 
+	   </if> 
+	   and b.comment_time>=#{point}
+	   and a.user_id=b.user_id
+	   order by comment_id desc
+	   limit 0, 20
+	</select>
 	
+	<!-- 查看更多，查看以前的贡献 -->
+	<select id="getOldContribute" resultType="Note">
+	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type 
+	    from note a, user b
+	   where a.target_id in (
+	       select note_id from note where user_id=#{user_id}
+	   )
+	   <if test="start != 0">
+	      and a.note_id&lt;#{start}
+	   </if>
+	   and a.user_id=b.user_id
+	   order by note_id desc
+	   limit 0,20	   
+	</select>
+	
+		
+	<!-- 查看更多，查看以前的粉丝 -->
+	<select id="getOldFans" resultType="User">
+	    select a.user_id, a.nickname, a.head_image_url, b.relation_time, b.relation_id
+	    from user a, relation b where 
+	    b.user_fans=a.user_id
+	   <if test="start != 0">
+	      and b.relation_id&lt;#{start}
+	   </if> 
+	   and b.user_star=#{user_id}
+	   order by relation_time desc
+	   limit 0,20
+	</select>
+		
+	<!-- 查看以前评论-->
+	<select id="getOldComment"  resultType="Comment">
+	    select a.user_id,a.head_image_url,a.nickname,b.comment_content,b.comment_time,b.comment_id
+	    from user a, comment b
+	    where b.note_id in (
+	       select note_id from note where user_id=#{user_id}
+	    )
+	   <if test="start != 0">
+	      and b.comment_id&lt;#{start} 
+	   </if> 
+	   and a.user_id=b.user_id
+	   order by comment_id desc
+	   limit 0, 20
+	</select>
+		
+		
+			
 	<!-- fade数量加一 -->
 	<update id="updateFadeNumPlus" parameterType="Integer">
 	   update user set fade_num=fade_num+1 where user_id=#{user_id}
@@ -211,4 +329,20 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<update id="updateContributePlus" parameterType="Integer">
 	   update addmessage set addContributeNum=addContributeNum+1 where user_id=#{user_id}
 	</update>
+	
+	<!-- 通知相关： 原主人的通知数量+1  -->
+	<update id="updateAddFansPlus" parameterType="Integer">
+	   update addmessage set addFansNum=addFansNum+1 where user_id=#{user_id}
+	</update>
+	
+	<!-- 未读评论数量+1  -->
+	<update id="updateAddCommentPlus" parameterType="Integer">
+	   update addmessage set addCommentNum=addCommentNum+1 where user_id=#{user_id}
+	</update>
+	
+	<!-- 单独加入一条偏好信息 -->
+	<insert id="addPreference">
+	   insert into preference values(#{user_id},#{note_id},#{score},null);
+	</insert>
+	
 </mapper>

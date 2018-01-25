@@ -2,10 +2,14 @@ package com.fade.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +17,14 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
-
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 import org.apache.shiro.crypto.hash.Md5Hash;
 import org.json.JSONObject;
@@ -39,9 +50,12 @@ import com.fade.mapper.NoteDao;
 import com.fade.mapper.UserDao;
 import com.fade.util.Const;
 import com.fade.util.RedisUtil;
+import com.fade.util.RongCloudHelper;
 import com.fade.util.TimeUtil;
 import com.fade.util.TokenUtil;
+import com.fade.websocket.MessageWebSocketHandler;
 
+@SuppressWarnings("deprecation")
 @Service("userService")
 public class UserServiceImpl implements UserService {
 	public static Logger logger = Logger.getLogger(UserServiceImpl.class);
@@ -64,6 +78,12 @@ public class UserServiceImpl implements UserService {
 	@Resource(name = "solrService")
 	private SolrService solrService;
 	
+	@Resource(name = "noteService")
+	private NoteService noteService;
+	
+	@Resource(name = "messageWebSocketHandler")
+	private MessageWebSocketHandler webSocketHandler;
+	
 	@Override
 	public String getUserById(Integer user_id) throws FadeException {
 		// 返回用户详细信息
@@ -77,6 +97,8 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public String loginWechat(String wechat_id) throws FadeException {
+		logger.info("准备注册的微信wechat_id="+wechat_id);
+		//User user = userDao.getUserByOpenIdQuery(wechat_id, 0);
 		User user = userDao.getUserByOpenId(wechat_id, 0);
 		if (user == null)
 			throw new FadeException("查询到的用户为空");
@@ -89,7 +111,7 @@ public class UserServiceImpl implements UserService {
 			// 记录日志
 			logger.info("user_id=" + user.getUser_id() + ", user_name=" + user.getNickname() + " 登录成功");
 			//redis上线
-			redisUtil.addKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
+			redisUtil.setAddKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
 			return JSON.toJSONString(map);
 		}
 	}
@@ -97,7 +119,8 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public String registerWechat(String js_code, User user) throws FadeException {
 		// 如果客户端本地没有检测到，则发送小程序code、以及一些用户信息到服务器，服务器请求得到openid，返回给小程序
-		logger.info("js_code=" + js_code + "请求注册账号");
+		String str = null;
+		logger.info("js_code=" + js_code + "请求注册账号,用户信息为=" + JSON.toJSONString(user));
 		try {
 			URL url = new URL("https://api.weixin.qq.com/sns/jscode2session?appid=" + Const.APP_ID + "&secret="
 					+ Const.AppSecret + "&js_code=" + js_code + "&grant_type=authorization_code");
@@ -111,46 +134,68 @@ public class UserServiceImpl implements UserService {
 				baos.write(buffer, 0, len);
 				baos.flush();
 			}
-			String str = baos.toString("utf-8");
-			logger.info("向腾讯服务器请求的结果是：" + str);
-			JSONObject temp = new JSONObject(str);
-			String wechat_id = temp.getString("openid");
-			user.setWechat_id(wechat_id);
-			// 生成fade_name 注册时间
-			String uuid = UUID.randomUUID().toString();
-			String fade_name = "fade_" + uuid.substring(30);
-			user.setFade_name(fade_name);
-			user.setRegister_time(TimeUtil.getCurrentTime());
-			if (userDao.getUserByOpenId(wechat_id, 0) == null) {
-				// 设置盐，MD5加密，散列一次
-				String salt = UUID.randomUUID().toString().substring(0, 5);
-				user.setSalt(salt);
-				String password_md5 = new Md5Hash(user.getPassword(), salt, 1).toString();
-				user.setPassword(password_md5);
-				userDao.addUser(user);// user_id设置到user对象中
-				//添加到索引数据库
-				user.setUuid(uuid);
-				solrService.solrAddUpdateUser(user);
-				// 新建tokenModel并返回
-				Map<String, Object> map = new HashMap<>();
-				TokenModel model = tokenUtil.createTokenModel(user.getUser_id());
-				map.put("tokenModel", model);
-				logger.info("wechat_id=" + wechat_id + ",user_id=" + user.getUser_id() + " 注册登录成功");
-				//redis上线
-				redisUtil.addKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
-				//返回部分信息
-				Map<String, Object> extra = new HashMap<>();
-				extra.put("tokenModel", model);
-				extra.put("register_time", user.getRegister_time());
-				extra.put("fade_name", user.getFade_name());
-				SimpleResponse response = new SimpleResponse("注册成功",null,extra);
-				return JSON.toJSONString(response);
-			} else {
-				throw new FadeException("注册失败，该wechat_id的账号已被注册");
-			}
+			str = baos.toString("utf-8");
 		} catch (Exception e) {
-			throw new FadeException("与腾讯服务器的连接异常，注册微信账号失败");
+			e.printStackTrace();
+			throw new FadeException("向腾讯服务器请求数据失败");
 		}
+		logger.info("向腾讯服务器请求的结果是：" + str);
+		JSONObject temp = new JSONObject(str);
+		String wechat_id = temp.getString("openid");
+		user.setWechat_id(wechat_id);
+		String url = null;
+		if((url = user.getHead_image_url()) != null){
+			//将url保存到本地
+			String dir_path = "image/head/" + TimeUtil.getYearMonth() + "/";
+			File dir = new File(dir_path);
+			if(!dir.exists()) dir.mkdirs();
+			String file_name = wechat_id + ".jpg";
+			downloadPic(url,Const.DATA_PATH + dir_path + file_name);
+			//再设置给user
+		    user.setHead_image_url(dir_path + file_name);
+		}
+		// 生成fade_name 注册时间
+		String uuid = UUID.randomUUID().toString();
+		String fade_name = "fade_" + uuid.substring(30);
+		user.setFade_name(fade_name);
+		user.setRegister_time(TimeUtil.getCurrentTime());
+		user.setUuid(uuid);
+		//设置盐
+		user.setSalt(uuid.substring(0, 5));
+		//logger.info("准备注册的微信用户信息="+JSON.toJSONString(user));
+		User userQuery = null;
+		if ((userQuery = userDao.getUserByOpenId(wechat_id, 0)) == null) {
+			userDao.addUser(user);// user_id设置到user对象中
+			//添加到索引数据库
+			user.setUuid(uuid);
+			solrService.solrAddUpdateUser(user);
+			// 新建tokenModel并返回
+			Map<String, Object> map = new HashMap<>();
+			TokenModel model = tokenUtil.createTokenModel(user.getUser_id());
+			map.put("tokenModel", model);
+			logger.info("wechat_id=" + wechat_id + ",user_id=" + user.getUser_id() + " 注册登录成功");
+			//redis上线
+			redisUtil.setAddKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
+			//返回部分信息
+			Map<String, Object> extra = new HashMap<>();
+			extra.put("tokenModel", model);
+			extra.put("register_time", user.getRegister_time());
+			extra.put("fade_name", user.getFade_name());
+			extra.put("wechat_id", user.getWechat_id());
+			extra.put("head_image_url", user.getHead_image_url());
+			return JSON.toJSONString(extra);
+		}else {
+			Map<String, Object>ansMap = new HashMap<>();
+			//因为是首次登陆，所以要返回tokenModel
+			TokenModel model = tokenUtil.createTokenModel(userQuery.getUser_id());
+			userQuery.setTokenModel(model);
+			//redis上线
+			redisUtil.setAddKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
+			logger.info("user_id=" + userQuery.getUser_id() + ",nickname=" + userQuery.getNickname() + " 登录成功");
+			ansMap.put("user", userQuery);
+			ansMap.put("success", "该账号已经注册！");
+			return JSON.toJSONString(ansMap);
+		}	
 	}
 
 	@Override
@@ -195,23 +240,22 @@ public class UserServiceImpl implements UserService {
 		String fade_name = "fade_" + uuid.substring(30);
 		user.setFade_name(fade_name);
 		user.setRegister_time(TimeUtil.getCurrentTime());
+		user.setUuid(uuid);
 		// 设置盐，MD5加密，散列一次
 		String salt = UUID.randomUUID().toString().substring(0, 5);
 		String password_md5 = new Md5Hash(user.getPassword(), salt, 1).toString();
 		user.setPassword(password_md5);
+		user.setSalt(salt);
 		userDao.addUser(user);// 主键属性被自动赋予到user中
 		userDao.addMessage(user.getUser_id());//到新增消息队列里“注册”
 		//添加到solr数据库中
-		user.setUuid(uuid);
 		solrService.solrAddUpdateUser(user);
 		if(user.getUser_id() == null) throw new FadeException("注册失败");
 		logger.info("user_id=" + user.getUser_id() + ",nickname=" + user.getNickname() + " 注册成功");
-		// 把新建的盐写入盐表
-		userDao.addSalt(user.getUser_id(), salt);
 		// 新建tokenModel并返回,key为user_id
 		TokenModel model = tokenUtil.createTokenModel(user.getUser_id());
 		//redis上线
-		redisUtil.addKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
+		redisUtil.setAddKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
 		//返回部分信息
 		Map<String, Object> extra = new HashMap<>();
 		extra.put("tokenModel", model);
@@ -307,8 +351,8 @@ public class UserServiceImpl implements UserService {
 				origin.setArea(user.getArea());
 			if (user.getNickname() != null)
 				origin.setNickname(user.getNickname());
-			if (user.getSchool() != null)
-				origin.setSchool(user.getSchool());
+			if (user.getSchool_name() != null)
+				origin.setSchool_name(user.getSchool_name());
 			if (user.getSex() != null)
 				origin.setSex(user.getSex());
 			if (user.getSummary() != null)
@@ -355,9 +399,7 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public String logoutUserByToken(TokenModel model) throws FadeException {
 		// 先从登录队列中移除
-		redisUtil.listRemoveValue("user_" + model.getUser_id(), model.getToken());
-		// 然后删除key
-		redisUtil.deleteKey(model.getToken());
+		tokenUtil.deleteToken(model);
 		// 清除相关缓存
 		offline(model.getUser_id());
 		return JSON.toJSONString(new SimpleResponse("退出登录成功", null));
@@ -396,6 +438,7 @@ public class UserServiceImpl implements UserService {
 		if(user_id != null){
 			redisUtil.deleteKey("list1_" + user_id);//首页队列
 			redisUtil.deleteKey("list2_" + user_id);//首页更新队列
+			redisUtil.setRemove(Const.ONLINE_USERS, "user_" + user_id);
 		}
 		return JSON.toJSONString(new SimpleResponse("下线成功！", null));
 	}
@@ -409,6 +452,10 @@ public class UserServiceImpl implements UserService {
 			userDao.updateConcernNumPlus(fans_id);
 			//粉丝数量加一
 			userDao.updateFansNumPlus(star_id);
+			//未读通知粉丝数量+1
+			userDao.updateAddFansPlus(star_id);
+			//通知前端更新
+			webSocketHandler.sendMessageToUser(star_id, JSON.toJSONString(new SimpleResponse("01",null)));
 		}else {
 			response.setErr("关注失败");
 		}
@@ -418,11 +465,8 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public String cancelConcern(Integer fans_id, Integer star_id) {
 		SimpleResponse response = new SimpleResponse();
-		if(userDao.cancelConcern(fans_id,star_id) != null){
-			response.setSuccess("取消关注成功！");
-		}else {
-			response.setErr("取消关注失败");
-		}
+		userDao.cancelConcern(fans_id,star_id);
+		response.setSuccess("取消关注成功！");
 		return JSON.toJSONString(response);
 	}
 
@@ -445,7 +489,11 @@ public class UserServiceImpl implements UserService {
 		}
 		checkAction(notes, user_id);
 		query.setList(notes);
-		query.setStart(notes.get(notes.size() -1).getNote_id());
+		int size = notes.size();
+		if(size == 0) query.setStart(0);
+		else {
+			query.setStart(notes.get(size -1).getNote_id());
+		}
 		return JSON.toJSONString(page);
 	}
 
@@ -472,40 +520,75 @@ public class UserServiceImpl implements UserService {
 	}
 	
 	@Override
-	public String getAddContribute(Integer user_id,Integer start) {
-		//一次10条
-		List<Note>list = noteDao.getAddContribute(user_id,start);
-		//更新通知点
-		userDao.updateContributePoint(user_id,TimeUtil.getCurrentTime());
-		//初始通知数量为0
-		userDao.updateContributeZero(user_id);
-		NoteQuery query = new NoteQuery(); 
+	public String getAddContribute(Integer user_id,Integer start,String point) {
+		//start=0,首次查询，返回时间点； 之后请求必须携带该时间点
+		NoteQuery query = new NoteQuery();
+		List<Note>list = null;
+		if(start == 0){
+			//查询时间点
+			point = userDao.getAddPoint(user_id,0);
+			query.setPoint(point);
+			list = userDao.getAddContribute(user_id,start,point);
+			//贡献队列初始化
+			userDao.initAddMessage(user_id,0);
+		}else {
+			list = userDao.getAddContribute(user_id,start,point);
+		}
+		//添加示例图片
+		for(Note note : list){
+			note.setExampleImage(noteDao.getOneImage(note.getNote_id()));
+		}
 		query.setList(list);
-		query.setStart(list.get(list.size() -1).getNote_id());
+		if(list.size() > 0) query.setStart(list.get(list.size() -1).getNote_id());
+		else {
+			query.setStart(0);
+		}
 		return JSON.toJSONString(query);
 	}
 
 	@Override
-	public String getAddFans(Integer user_id, Integer start) {
-		//一次10条
-		List<User>list = userDao.getAddFans(user_id,start);
-		//把数据库的该通知数量改为0,更新通知点
-		userDao.updateAddFans(user_id,TimeUtil.getCurrentTime());
+	public String getAddFans(Integer user_id,Integer start,String point) {
+		//start=0,首次查询，返回时间点； 之后请求必须携带该时间点
 		UserQuery query = new UserQuery();
-		query.setStart(list.get(list.size() - 1).getRelation_id());
+		List<User>list = null;
+		if(start == 0){
+			//查询时间点
+			point = userDao.getAddPoint(user_id,1);
+			query.setPoint(point);
+			list = userDao.getAddFans(user_id,start,point);
+			//粉丝队列初始化
+			userDao.initAddMessage(user_id,1);
+		}else {
+			list = userDao.getAddFans(user_id,start,point);
+		}
 		query.setList(list);
+		if(list.size() > 0) query.setStart(list.get(list.size() -1).getUser_id());
+		else {
+			query.setStart(0);
+		}
 		return JSON.toJSONString(query);
 	}
 	
 	@Override
-	public String getAddComment(Integer user_id, Integer start) {
-		//只返回一级评论,一次10条
-		List<Comment>list = commentDao.getAddComment(user_id,start);
-		//把数据库的该通知数量改为0,更新通知点
-		userDao.updateAddComment(user_id,TimeUtil.getCurrentTime());
+	public String getAddComment(Integer user_id,Integer start,String point) {
+		//start=0,首次查询，返回时间点； 之后请求必须携带该时间点
 		CommentQuery query = new CommentQuery();
+		List<Comment>list = null;
+		if(start == 0){
+			//查询时间点
+			point = userDao.getAddPoint(user_id,2);
+			query.setStart(0);
+			list = userDao.getAddComment(user_id,start,point);
+			//粉丝队列初始化
+			userDao.initAddMessage(user_id,2);
+		}else {
+			list = userDao.getAddComment(user_id,start,point);
+		}
 		query.setList(list);
-		query.setStart(list.get(list.size() -1).getComment_id());
+		if(list.size() > 0) query.setStart(list.get(list.size() -1).getComment_id());
+		else {
+			query.setStart(0);
+		}
 		return JSON.toJSONString(query);
 	}
 
@@ -538,6 +621,134 @@ public class UserServiceImpl implements UserService {
 			}else if (type == 2) {
 				//减
 				note.setAction(2);
+			}
+		}
+	}
+
+	@Override
+	public String getTwentyRecommendUser(Integer user_id, Integer page) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	
+	@Override
+	public String getMessageToken(Integer user_id) throws FadeException{
+		//先查询用户信息
+		User user = userDao.getSimpleUserById(user_id);//获取用户昵称，用户头像
+		//向融云发起请求
+		try {
+			//5位随机数
+/*			String randomNum = UUID.randomUUID().toString().substring(0,5);
+			Long timestamp = System.currentTimeMillis();
+			String signature = DigestUtils.sha1Hex(Const.RONG_APP_SECRET + randomNum + timestamp);*/
+			String randomNum = RongCloudHelper.getRandNum();
+			String timestamp = RongCloudHelper.getCurTime();
+			String signature = RongCloudHelper.getSignature(randomNum, timestamp);
+			HttpClient client = new DefaultHttpClient();
+			HttpPost postRequest = new HttpPost(Const.RONG_URL + "/user/getToken.json");
+			postRequest.addHeader("App-Key", Const.RONG_APP_KEY);
+			postRequest.addHeader("Nonce", randomNum);
+			postRequest.addHeader("Timestamp", timestamp.toString());
+			postRequest.addHeader("Signature", signature);
+			List<NameValuePair>list = new ArrayList<>();
+			list.add(new BasicNameValuePair("userId", user_id.toString()));
+			list.add(new BasicNameValuePair("name", user.getNickname()));
+			list.add(new BasicNameValuePair("portraitUri", Const.BASE_IP + user.getHead_image_url()));
+			UrlEncodedFormEntity entity = new UrlEncodedFormEntity(list, "utf-8");
+			postRequest.setEntity(entity);
+			
+			HttpResponse response = client.execute(postRequest);
+			String content = EntityUtils.toString(response.getEntity());
+			if(response.getStatusLine().getStatusCode() == 200){
+				logger.info("用户" + user_id + "请求融云token成功");
+				//直接返回token信息
+				com.alibaba.fastjson.JSONObject object = JSON.parseObject(content);
+				System.out.println("token=" + object.getString("token"));
+				com.alibaba.fastjson.JSONObject ans = new com.alibaba.fastjson.JSONObject();
+				ans.put("token", object.getString("token"));
+				return ans.toJSONString();			
+			}else {
+				System.out.println(response.getStatusLine().getStatusCode());
+				System.out.println(content);
+				throw new FadeException("向融云服务器请求token失败！--" + content);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new FadeException("向融云服务器请求token失败！");
+		}
+	}
+
+	
+	@Override
+	public String getOldContribute(Integer user_id, Integer start) {
+		NoteQuery query = new NoteQuery();
+		List<Note>list = userDao.getOldContribute(user_id,start);
+		//添加示例图片
+		for(Note note : list){
+			note.setExampleImage(noteDao.getOneImage(note.getNote_id()));
+		}
+		query.setList(list);
+		if(list.size() > 0) query.setStart(list.get(list.size() - 1).getNote_id());
+		else {
+			query.setStart(0);
+		}	
+		return JSON.toJSONString(query);
+	}
+
+	@Override
+	public String getOldFans(Integer user_id, Integer start) {
+		UserQuery query = new UserQuery();
+		List<User>list = userDao.getOldFans(user_id,start);
+		query.setList(list);
+		if(list.size() > 0) query.setStart(list.get(list.size() - 1).getUser_id());
+		else {
+			query.setStart(0);
+		}	
+		return JSON.toJSONString(query);
+	}
+
+	@Override
+	public String getOldComment(Integer user_id, Integer start) {
+		CommentQuery query = new CommentQuery();
+		List<Comment>list = userDao.getOldComment(user_id,start);
+		query.setList(list);
+		if(list.size() > 0) query.setStart(list.get(list.size() - 1).getComment_id());
+		else {
+			query.setStart(0);
+		}	
+		return JSON.toJSONString(query);
+	}
+	
+	public void downloadPic(String url, String localPath){
+		logger.info("准备保存文件" + url);
+		File file = new File(localPath);
+		if(file.exists()){
+			file.delete();
+		}
+	    FileOutputStream fs = null;
+	    URLConnection conn = null;
+	    InputStream inStream = null;
+        try {
+ 	       int byteread = 0;
+            conn = new URL(url).openConnection();
+            inStream = conn.getInputStream();
+            fs = new FileOutputStream(localPath);
+            byte[] buffer = new byte[1204];
+            while ((byteread = inStream.read(buffer)) != -1) {
+                fs.write(buffer, 0, byteread);
+                logger.info("保存文件成功，路径为" + localPath );
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+			try {
+				fs.close();
+				inStream.close();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 	}

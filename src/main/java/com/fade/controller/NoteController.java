@@ -1,4 +1,4 @@
-package com.fade.controller;
+ package com.fade.controller;
 
 import javax.annotation.Resource;
 import org.springframework.stereotype.Controller;
@@ -39,6 +39,7 @@ public class NoteController {
 	@RequestMapping(value = "/getMoreNote/{user_id}/{updateList}", method = RequestMethod.GET)
 	@ResponseBody
 	public String getMoreNote(@PathVariable("user_id")Integer user_id, @PathVariable("updateList")String updateList){
+		System.out.println("user_id=" + user_id + " updateList=" + updateList);
 		//顶部下拉刷新，同时更新之前发过的帖子的信息,updateList的一项要包含note_id,target_id
 		return noteService.getMoreNote(user_id,JSON.parseArray(updateList, Note.class));
 	}	
@@ -75,5 +76,21 @@ public class NoteController {
 		return noteService.getMyNote(user_id,start);
 	}	
 
+	@RequestMapping(value = "/getOtherPersonNote/{user_id}/{my_id}/{start}", method = RequestMethod.GET)
+	@ResponseBody
+	public String getOtherPersonNote(@PathVariable("user_id")Integer user_id,@PathVariable("my_id")Integer my_id,
+			@PathVariable("start")Integer start){
+		//获取个人帖子信息的请求，10条一次
+		System.out.println("获取他人帖子信息的请求");
+		return noteService.getOtherPersonNote(user_id,my_id,start);
+	}	
 
+	@RequestMapping(value = "/getFullNote/{note_id}/{user_id}", method = RequestMethod.GET)
+	@ResponseBody
+	public String getFullNote(@PathVariable("note_id")Integer note_id,@PathVariable("user_id")Integer user_id){
+		//获取一个首页完整帖子的请求
+		System.out.println("获取一个首页完整帖子的请求");
+		return noteService.getFullNote(note_id,user_id);
+	}		
+	
 }

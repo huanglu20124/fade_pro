@@ -1,6 +1,15 @@
 package com.fade.controller;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -145,25 +154,28 @@ public class UserController {
 		return userService.getAddMessage(user_id);
 	}	
 	
-	@RequestMapping(value = "/getAddContribute/{user_id}/{start}",method =  RequestMethod.GET)
+	@RequestMapping(value = "/getAddContribute/{user_id}/{start}/{point}",method =  RequestMethod.GET)
 	@ResponseBody
-	public String getAddContribute(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+	public String getAddContribute(@PathVariable("user_id")Integer user_id,
+			@PathVariable("start")Integer start,@PathVariable("point")String point){
 		//获取“贡献者”队列
-		return userService.getAddContribute(user_id, start);
+		return userService.getAddContribute(user_id, start,point);
 	}	
 	
-	@RequestMapping(value = "/getAddFans/{user_id}/{start}",method =  RequestMethod.GET)
+	@RequestMapping(value = "/getAddFans/{user_id}/{start}/{point}",method =  RequestMethod.GET)
 	@ResponseBody
-	public String getAddFans(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+	public String getAddFans(@PathVariable("user_id")Integer user_id,
+			@PathVariable("start")Integer start,@PathVariable("point")String point){
 		//获取新的粉丝队列
-		return userService.getAddFans(user_id, start);
+		return userService.getAddFans(user_id, start,point);
 	}
 	
-	@RequestMapping(value = "/getAddComment/{user_id}/{start}",method =  RequestMethod.GET)
+	@RequestMapping(value = "/getAddComment/{user_id}/{start}/{point}",method =  RequestMethod.GET)
 	@ResponseBody
-	public String getAddComment(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+	public String getAddComment(@PathVariable("user_id")Integer user_id,
+			@PathVariable("start")Integer start,@PathVariable("point")String point){
 		//获取新的队列
-		return userService.getAddComment(user_id, start);
+		return userService.getAddComment(user_id, start,point);
 	}
 	
 	@RequestMapping(value = "/searchUser/{keyword}/{page}",method =  RequestMethod.GET)
@@ -171,4 +183,44 @@ public class UserController {
 	public String searchUser(@PathVariable("keyword")String keyword, @PathVariable("page")Integer page){
 		return userService.searchUser(keyword,page);
 	}
+	
+	@RequestMapping(value = "/getRecommendUser/{user_id}/{page}",method =  RequestMethod.GET)
+	@ResponseBody	
+	public String getRecommendUser(@PathVariable("user_id")Integer user_id, @PathVariable("page")Integer page){
+		//感兴趣用户，20条一次地加载，上限100个
+		return userService.getTwentyRecommendUser(user_id,page);
+	}
+	
+	//从融云处获取token
+	@RequestMapping(value = "/getMessageToken/{user_id}", method = RequestMethod.GET)
+	@ResponseBody
+	public String getMessageToken(@PathVariable("user_id")Integer user_id)throws FadeException{
+		//System.out.println("收到从融云处获取token的请求");
+		return userService.getMessageToken(user_id);
+	}	
+	
+	@RequestMapping(value = "/getOldContribute/{user_id}/{start}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getOldContribute(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+		//获取“贡献者”队列
+		System.out.println("收到getOldContribute的请求");
+		return userService.getOldContribute(user_id, start);
+	}	
+	
+	@RequestMapping(value = "/getOldFans/{user_id}/{start}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getOldFans(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+		//获取新的粉丝队列
+		return userService.getOldFans(user_id, start);
+	}
+	
+	@RequestMapping(value = "/getOldComment/{user_id}/{start}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getOldComment(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+		//获取新的队列
+		return userService.getOldComment(user_id, start);
+	}
+	
+	
+	
 }

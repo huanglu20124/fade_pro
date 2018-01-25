@@ -20,4 +20,12 @@ public interface NoteService {
 	String deleteNote(Integer note_id, Integer user_id);
 
 	String getMyNote(Integer user_id, Integer start);
+
+	String getOtherPersonNote(Integer user_id, Integer my_id, Integer start);
+	
+	void checkAction(List<Note>notes, Integer user_id);
+
+	void addImage(List<Note> list);
+
+	String getFullNote(Integer note_id, Integer user_id);
 }

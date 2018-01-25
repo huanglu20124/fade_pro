@@ -9,7 +9,8 @@
         http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd ">
 	<!--扫描Controller -->
 	<context:component-scan base-package="com.fade.controller" />
-	
+	<context:component-scan base-package="com.fade.*"/>
+    
 	<!-- 配置注解驱动 -->
 	<mvc:annotation-driven /> 
 	
@@ -27,12 +28,6 @@
         </mvc:message-converters>
     </mvc:annotation-driven>
 	
-
-	<!-- 这两个类用来启动基于Spring MVC的注解功能，将控制器与方法映射加入到容器中 -->
-	<!-- 配置处理器映射器 HandlerMapping -->
-	<!-- <bean class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping" /> -->
-	<!-- 配置处理器适配器HandlerAdapter -->
-	<!-- <bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter" /> -->
 	
 	<!-- 配置视图解析器 -->
 	<bean

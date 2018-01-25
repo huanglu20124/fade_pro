@@ -38,14 +38,24 @@ public interface UserService {
 
 	String getAddMessage(Integer user_id);
 
-	String getAddContribute(Integer user_id,Integer start);
+	String getAddContribute(Integer user_id,Integer start,String point);
 
-	String getAddFans(Integer user_id, Integer start);
+	String getAddFans(Integer user_id,Integer start,String point);
 
-	String getAddComment(Integer user_id, Integer start);
+	String getAddComment(Integer user_id,Integer start,String point);
 
 	String searchUser(String keyword, Integer page);
 
+	String getTwentyRecommendUser(Integer user_id, Integer page);
 
+	String getMessageToken(Integer user_id)throws FadeException;
+
+	String getOldContribute(Integer user_id, Integer start);
+
+	String getOldFans(Integer user_id, Integer start);
+
+	String getOldComment(Integer user_id, Integer start);
+
+	void downloadPic(String url, String localPath);
 
 }

@@ -36,6 +36,14 @@
 				</configuration>
 			</plugin>
 
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+
 			<!-- <plugin> <groupId>org.codehaus.mojo</groupId> <artifactId>tomcat-maven-plugin</artifactId> 
 				<configuration> <url>https://sysufade.cn/manager/html</url> <server>tomcat</server> 
 				<username>huanglu</username> <password>137137lu</password> <update>true</update> 
@@ -284,11 +292,38 @@
 			<artifactId>solr-solrj</artifactId>
 			<version>4.10.2</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-websocket</artifactId>
 			<version>4.1.4.RELEASE</version>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context-support</artifactId>
+			<version>4.2.4.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.tomcat.embed</groupId>
+			<artifactId>tomcat-embed-websocket</artifactId>
+			<version>7.0.52</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.apache.mahout/mahout-integration -->
+<!-- 		<dependency>
+			<groupId>org.apache.mahout</groupId>
+			<artifactId>mahout-integration</artifactId>
+			<version>0.12.2</version>
+		</dependency> -->
+
+		<!-- https://mvnrepository.com/artifact/commons-codec/commons-codec -->
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.10</version>
+		</dependency>
+
+
 	</dependencies>
 </project>

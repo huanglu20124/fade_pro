@@ -20,4 +20,21 @@ public class Const {
 	//die_list，收集死亡的帖子，每隔一分钟清理一次
 	public static final String DIE_LIST     = "die_list";
 	
+	//融云的app秘钥
+	public static final String RONG_APP_KEY ="0vnjpoad0gn2z";
+	public static final String RONG_APP_SECRET ="Sk52dbUr6eg";
+	public static final String RONG_URL     ="http://api.cn.ronghub.com";
+	
+	//以下是推荐算法计算评分：
+	public static final double BASE_SCORE = 1;//基础分
+	public static final double SCHOOL_SCORE = 1; //同学校加1分
+	public static final double SECOND_SCORE = 1; //加减秒加1分
+	public static final double DETAIL_SCORE = 0.5; //打开详情页一次加0.5
+	public static final double COMMENT_SCORE = 1; //评论一次加1
+	public static final double FAV_SCORE = 1; //收藏一次加2
+	
+	
+	
+	
+	
 }

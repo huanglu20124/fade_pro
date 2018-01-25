@@ -7,6 +7,7 @@
 	http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.2.xsd 
 	http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.2.xsd ">
 	
+
 	<!-- 加载数据库配置相关的文件夹 -->
 	<bean
 		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">

@@ -2,6 +2,7 @@ package com.fade.domain;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 
 public class Note implements Serializable {
 	/**
@@ -13,26 +14,42 @@ public class Note implements Serializable {
 	private Integer user_id;
 	private String nickname;
 	private String head_image_url;
-
 	private String note_content;
 	private String post_time;       //发布时间
 	private Integer is_die;         //是否死亡
-
 	private Integer comment_num;    //评论数量
 	private Integer sub_num;        //减一秒数量
 	private Integer add_num;        //增一秒数量
 	private Integer target_id;      //代表原贴id（不为0的话）
 	private Integer type;           //代表帖子是增/减/原创, 1/2/0
 	private Integer action;         //动作，0为没动作，1为对这个帖子增过，0为对这个帖子减过
-	
 	private Long fetchTime;//给客户端的此刻时间
-
 	private List<Image> images;     // 图片集合
-
 	private Note origin;// 原贴
 
+	private String position; //地理位置
+	
 	private Integer baseComment_num; //一级评论数量，后端缓存判断用到，数据库不保存
 	
+	private String exampleImage;//示例图片
+	
+	
+	public String getExampleImage() {
+		return exampleImage;
+	}
+
+	public void setExampleImage(String exampleImage) {
+		this.exampleImage = exampleImage;
+	}
+
+	public String getPosition() {
+		return position;
+	}
+
+	public void setPosition(String position) {
+		this.position = position;
+	}
+
 	public Note() {
 		this.comment_num = 0;
 		this.add_num = 0;
@@ -190,17 +207,14 @@ public class Note implements Serializable {
 	//如果note_id相等，则两个帖子相等
 	@Override
 	public int hashCode() {
-		if(note_id != null) return note_id.hashCode();
-		else return 0;
+		return Objects.hash(note_id.intValue());
 	}
 	
 	@Override
 	public boolean equals(Object obj) {
+		if(obj == this) return true; 
+		if(!(obj instanceof Note)) return false;	
 		Note note = (Note) obj;
-		if(this.note_id == note.getNote_id()){
-			return true;
-		}else {
-			return false;
-		}
+		return note_id.equals(note.getNote_id());
 	}
 }

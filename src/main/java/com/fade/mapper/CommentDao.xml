@@ -49,21 +49,4 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	    select comment_id from comment where user_id=#{user_id}
 	</select>
 	
-	<!-- 用于通知页只返回一级评论,一次10条 -->
-	<select id="getAddComment"  resultType="Comment">
-	    select a.user_id,a.head_image_url,a.nickname,b.comment_content,b.comment_time
-	    from user a, comment b
-	    where b.note_id in (
-	       select note_id from note where user_id=#{user_id}
-	    )
-	   <if test="start != 0">
-	      b.comment_id&lt;#{start} 
-	   </if> 
-	   and b.comment_time>=(
-	      select addCommentPoint from addmessage where user_id=#{user_id}
-	   )
-	   and a.user_id=b.user_id
-	   order by comment_id desc
-	   limit 0,10
-	</select>
 </mapper>

@@ -1,6 +1,9 @@
 package com.fade.util;
 
+import static org.junit.Assert.*;
+
 import org.apache.shiro.crypto.hash.Md5Hash;
+import org.junit.Test;
 
 public class MD5Utils {
 	public String getMd5BySalt(String source, String salt){
@@ -13,5 +16,10 @@ public class MD5Utils {
 		Md5Hash md5Hash = new Md5Hash(source, salt, hashIterations);
 		String password_md5 =  md5Hash.toString();
 		return password_md5;
+	}
+	
+	@Test
+	public void test() throws Exception {
+		System.out.println(getMd5BySalt("123", "4255f"));
 	}
 }

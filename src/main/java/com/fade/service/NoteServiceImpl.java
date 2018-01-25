@@ -5,8 +5,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -31,6 +35,7 @@ import com.fade.mapper.UserDao;
 import com.fade.util.Const;
 import com.fade.util.RedisUtil;
 import com.fade.util.TimeUtil;
+import com.fade.websocket.MessageWebSocketHandler;
 
 @Service("noteService")
 public class NoteServiceImpl implements NoteService {
@@ -48,6 +53,9 @@ public class NoteServiceImpl implements NoteService {
 	
 	@Resource(name = "commentService")
 	private CommentService commentService;
+	
+	@Resource(name = "messageWebSocketHandler")
+	private MessageWebSocketHandler webSocketHandler;
 	
 	private Logger logger = Logger.getLogger(NoteServiceImpl.class);
 	
@@ -117,7 +125,7 @@ public class NoteServiceImpl implements NoteService {
 		String key = "note_" + note.getNote_id();
 		redisUtil.addKey(key, JSON.toJSONString(note), Const.DEFAULT_LIFE, TimeUnit.MINUTES);
 		//添加到热门推送排行榜
-		//redisUtil.zsetAddKey(Const.HOT_NOTES, key, 0d);
+		redisUtil.zsetAddKey(Const.HOT_NOTES, key, 0d);
 		// 找到所有在线的粉丝，然后将它们的list2更新(这个后期要考虑优化，因为粉丝数量可能很大)
 		List<Integer>all_fans_ids = userDao.getAllFansId(note.getUser_id()); 
 		String temp = "note_"+note.getNote_id();
@@ -285,8 +293,8 @@ public class NoteServiceImpl implements NoteService {
 		if(die_ids.size() > 0) redisUtil.setAddKeyMul(Const.DIE_LIST, die_ids.toArray());
 		if(count < 10){
 			//最后一次检查，如果数量小于10，热门推送进行补充
-			List<Note>hot_notes = getHotNote(user_id);
-			if(hot_notes != null) ans_list.addAll(hot_notes);
+			//List<Note>hot_notes = getHotNote(user_id,ans_list,null);
+			//if(hot_notes != null) ans_list.addAll(hot_notes);
 		}
 		//最后一个切面
 		checkAction(ans_list, user_id);
@@ -302,22 +310,53 @@ public class NoteServiceImpl implements NoteService {
 		//顶部下拉刷新
 		NoteQuery query = new NoteQuery();
 		List<Note>add_notes = getAddNote(user_id);
+		//返回更新信息
+		checkIsDie(updateList);
 		if(add_notes.size() < 10){
-			List<Note>hot_notes = getHotNote(user_id);
-			if(hot_notes != null) add_notes.addAll(hot_notes);
+/*			List<Note>hot_notes = getHotNote(user_id,add_notes,updateList);
+			if(hot_notes != null) add_notes.addAll(hot_notes);*/
 		}
 		//检查帖子是否点过赞
 		checkAction(add_notes, user_id);
-		//返回更新信息
-		checkIsDie(updateList);
 		query.setUpdateList(updateList);
 		query.setList(add_notes);
 		return JSON.toJSONString(query);
 	}
 	 
-	private List<Note> getHotNote(Integer user_id) {
-		//热门推送帖
-		return null;
+	private List<Note> getHotNote(Integer user_id,List<Note>add_notes,List<Note>updateList) {
+		int num = 10 - add_notes.size();
+		//热门推送帖,先选取头1000条，随机用不重复的补
+		//添加到集合中，方便对比
+		Set<Note>set = new HashSet<>();
+		set.addAll(add_notes);
+		if(updateList != null) set.addAll(updateList);
+		List<Note>ansNotes = new ArrayList<>();
+		List<String>list = redisUtil.zsetRange(Const.HOT_NOTES, 0, 1000);
+		if(list.size() > 0){
+			int[]randomArray = null;
+			if(list.size() >= num) {
+				randomArray = randomArray(0, list.size() -1, num);
+			}else {
+				randomArray = randomArray(0, list.size() -1, list.size());
+			}
+			for(int randomNum : randomArray){
+				String orgin_str = (String) redisUtil.getValue(list.get(randomNum));
+				if(orgin_str != null){
+					Note origin = JSON.parseObject(orgin_str, Note.class);
+					if(set.size() > 0){
+					    while (!set.contains(origin)) {
+					    	ansNotes.add(origin);
+						}
+					}else {
+						ansNotes.add(origin);
+					}
+				}else {
+					//从推送榜中删除
+					redisUtil.zsetDeleteKey(Const.HOT_NOTES, list.get(randomNum));
+				}
+			}
+		}	
+		return ansNotes;
 	}
 
 	private List<Note> getAddNote(Integer user_id) {
@@ -366,9 +405,12 @@ public class NoteServiceImpl implements NoteService {
 	@Override
 	public String changeSecond(Note note) throws FadeException{
 		//增和减秒的请求，实则是增加帖子
-		if(note == null || note.getTarget_id() == null) throw new FadeException("请求格式不正确！");
+		if(note == null || note.getTarget_id() == null || note.getTarget_id() == 0) throw new FadeException("请求格式不正确！");
 		String origin_str = (String)redisUtil.getValue("note_" + note.getTarget_id());
 		if(origin_str == null) throw new FadeException("操作失败，原贴已失效！");
+		//续秒前检查是否已经续过
+		Integer noteTempId = noteDao.getNoteQueryChangeSecond(note.getUser_id(),note.getTarget_id());
+		if(noteTempId != null)  throw new FadeException("操作失败，已经续过秒");
 		//设置帖子时间以及其他参数，用户名是前端发来的 
 		String post_time = TimeUtil.getCurrentTime();
 		note.setPost_time(post_time);
@@ -403,6 +445,8 @@ public class NoteServiceImpl implements NoteService {
 			if(time_left <= 0){
 				//直接删除原贴
 				redisUtil.setAddKey(Const.DIE_LIST, origin.getNote_id().toString());
+				//从排行榜中移除
+				redisUtil.zsetDeleteKey(Const.HOT_NOTES, "note_" + origin.getNote_id());
 				redisUtil.deleteKey("note_" + origin.getNote_id());
 				return JSON.toJSONString(new SimpleResponse("0",null));//代表原贴已消失
 			}
@@ -413,6 +457,8 @@ public class NoteServiceImpl implements NoteService {
 		//原主人的通知数量+1
 		userDao.updateContributePlus(origin.getUser_id());
 		redisUtil.addKey("note_"+origin.getNote_id(), JSON.toJSONString(origin),time_left, TimeUnit.MINUTES);
+		//websocket通知原主人
+		webSocketHandler.sendMessageToUser(origin.getUser_id(), JSON.toJSONString(new SimpleResponse("00", null)));
 		//转发帖只存入数据库，不添加到redis中
 		String key = "note_" + note.getNote_id() + "_" + note.getTarget_id();
 		// 找到所有在线的粉丝，然后将它们的list2更新(这个后期要考虑优化，因为粉丝数量可能很大)
@@ -426,6 +472,8 @@ public class NoteServiceImpl implements NoteService {
 		//同时，自己的list2队列也要更新
 		//redisUtil.listRightPush("list2_"+note.getUser_id(),key);
 		Map<String, Object>extra = new HashMap<>();
+		//更新热门推送排行榜的排名
+		redisUtil.zsetAddKey(Const.HOT_NOTES, "note_" + origin.getNote_id(), (double)(add_sum - sub_sum));
 		//返回部分信息
 		extra.put("post_time", post_time);		
 		extra.put("note_id", note.getNote_id());
@@ -438,11 +486,11 @@ public class NoteServiceImpl implements NoteService {
 		return JSON.toJSONString(response);
 	}
   
-	private void checkAction(List<Note>notes, Integer user_id){
+	public void checkAction(List<Note>notes, Integer user_id){
 		//增加是否续或者减的属性
 		for(Note note : notes){
 			Integer type = null;
-			if(note.getTarget_id() != 0){
+			if(note.getTarget_id() != null && note.getTarget_id() != 0){
 				//转发帖，查询是否对原贴点赞
 				type = noteDao.getNoteCheckAction(user_id,note.getTarget_id());
 			}else {
@@ -549,7 +597,6 @@ public class NoteServiceImpl implements NoteService {
 		return JSON.toJSONString(response);
 	}
 
-	
 	@Override
 	public String getMyNote(Integer user_id, Integer start) {
 		NoteQuery query = new NoteQuery();
@@ -561,8 +608,97 @@ public class NoteServiceImpl implements NoteService {
 		}
 		checkAction(notes, user_id);
 		query.setList(notes);
-		query.setStart(notes.get(notes.size() -1).getNote_id());
+		int size = notes.size();
+		if(size == 0) query.setStart(0);
+		else {
+			query.setStart(notes.get(size -1).getNote_id());
+		}	
 		return JSON.toJSONString(query);
 	}
 	
+	public int[] randomArray(int min,int max,int n){  
+	    int len = max-min+1;  
+	      
+	    if(max < min || n > len){  
+	        return null;  
+	    }  
+	      
+	    //初始化给定范围的待选数组  
+	    int[] source = new int[len];  
+	       for (int i = min; i < min+len; i++){  
+	        source[i-min] = i;  
+	       }  
+	         
+	       int[] result = new int[n];  
+	       Random rd = new Random();  
+	       int index = 0;  
+	       for (int i = 0; i < result.length; i++) {  
+	        //待选数组0到(len-2)随机一个下标  
+	           index = Math.abs(rd.nextInt() % len--);  
+	           //将随机到的数放入结果集  
+	           result[i] = source[index];  
+	           //将待选数组中被随机到的数，用待选数组(len-1)下标对应的数替换  
+	           source[index] = source[len];  
+	       }  
+	       return result;  
+	}
+
+	
+	@Override
+	public String getOtherPersonNote(Integer user_id, Integer my_id, Integer start) {
+		NoteQuery query = new NoteQuery();
+		List<Note>notes = noteDao.getMyNote(user_id,start);
+		//图片数据
+		for(Note note : notes){
+			List<Image>images = noteDao.getNoteImage(note.getNote_id());
+			note.setImages(images);
+		}
+		checkAction(notes, my_id);
+		query.setList(notes);
+		int size = notes.size();
+		if(size == 0) query.setStart(0);
+		else {
+			query.setStart(notes.get(size -1).getNote_id());
+		}	
+		return JSON.toJSONString(query);
+	}
+
+	
+	@Override
+	public void addImage(List<Note> list) {
+		//添加图片
+		for(Note note : list){
+			note.setImages(noteDao.getNoteImage(note.getNote_id()));
+		}
+	}
+
+	@Override
+	public String getFullNote(Integer note_id, Integer user_id) {
+		Note note = noteDao.getNoteById(note_id);
+		if(note != null){
+			Integer type = null;
+			if(note.getTarget_id() != null && note.getTarget_id() != 0){
+				//转发帖，查询是否对原贴点赞
+				type = noteDao.getNoteCheckAction(user_id,note.getTarget_id());
+				//添加原贴
+				Note origin = noteDao.getNoteById(note.getTarget_id());
+				origin.setImages(noteDao.getNoteImage(origin.getNote_id()));
+				note.setOrigin(origin);
+			}else {
+				type = noteDao.getNoteCheckAction(user_id,note.getNote_id());
+				note.setImages(noteDao.getNoteImage(note_id));
+			}
+			if(type == null){
+				//还没操作过
+				note.setAction(0);
+			}else if (type == 1) {
+				//增
+				note.setAction(1);
+			}else if (type == 2) {
+				//减
+				note.setAction(2);
+			}
+		}
+		return JSON.toJSONString(note);
+	}  
 }

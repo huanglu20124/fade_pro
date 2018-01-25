@@ -1,10 +1,10 @@
 package com.fade.websocket;
 
-import org.springframework.context.annotation.Bean;
+import javax.annotation.Resource;
+
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
-import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
@@ -13,20 +13,21 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebMvc
 @EnableWebSocket
 public class WebSocketConfig extends WebMvcConfigurerAdapter implements WebSocketConfigurer{
+	
+	@Resource(name = "interceptor")
+	private WebSocketHandshakeInterceptor interceptor;
 
+	@Resource(name = "messageWebSocketHandler")
+	private MessageWebSocketHandler handler;
+	
 	@Override
 	public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 		//分别添加处理器，拦截器
-		registry.addHandler(systemWebSocketHandler(),"/webSocketServer")
-		        .addInterceptors(new WebSocketHandshakeInterceptor());
-		registry.addHandler(systemWebSocketHandler(),"/webSocketServer/sockjs")
-		        .addInterceptors(new WebSocketHandshakeInterceptor())
+		registry.addHandler(handler,"/webSocketServer")
+		        .addInterceptors(interceptor);
+		registry.addHandler(handler,"/webSocketServer/sockjs")
+		        .addInterceptors(interceptor)
 		        .withSockJS();
 	}
-	
-	@Bean
-    public WebSocketHandler systemWebSocketHandler(){
-        return new SystemWebSocketHandler();
-    }
 	
 }

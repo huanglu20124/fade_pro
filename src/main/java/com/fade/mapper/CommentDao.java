@@ -27,7 +27,4 @@ public interface CommentDao {
 	//获得一个用户的所有一级评论的id
 	List<Integer> getUserAllComment(Integer user_id);
 
-	//用于通知页只返回一级评论,一次10条
-	List<Comment> getAddComment(@Param("user_id")Integer user_id, @Param("start")Integer start);
-
 }

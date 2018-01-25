@@ -24,6 +24,7 @@ import com.fade.mapper.NoteDao;
 import com.fade.mapper.UserDao;
 import com.fade.util.RedisUtil;
 import com.fade.util.TimeUtil;
+import com.fade.websocket.MessageWebSocketHandler;
 
 @Service("commentService")
 public class CommentServiceImpl implements CommentService{
@@ -38,6 +39,9 @@ public class CommentServiceImpl implements CommentService{
 	
 	@Resource(name = "commentDao")
 	private CommentDao commentDao;
+	
+	@Resource(name = "messageWebSocketHandler")
+	private MessageWebSocketHandler webSocketHandler;
 	
 	private static Logger logger = Logger.getLogger(CommentService.class);
 	
@@ -134,7 +138,6 @@ public class CommentServiceImpl implements CommentService{
 		if(isNeed){
 			//反过来
 			Collections.reverse(ans_list);
-			System.out.println("search_id" + search_id);
 			list = commentDao.getTenComment(note_id,search_id,num); 
 			getSecondComment(list);//添加二级评论
 			if(list.size() > 0) {
@@ -212,7 +215,12 @@ public class CommentServiceImpl implements CommentService{
 				note.setBaseComment_num(note.getBaseComment_num() +1);
 				long time = redisUtil.getKeyTime("note_" + comment.getNote_id(), TimeUnit.MINUTES);
 				redisUtil.addKey(key, JSON.toJSONString(note), time, TimeUnit.MINUTES);
+				//websocket通知主人更新
+				//更新该主人数据库通知数量
+				userDao.updateAddCommentPlus(note.getUser_id());
+				webSocketHandler.sendMessageToUser(note.getUser_id(),JSON.toJSONString(new SimpleResponse("02",null)));
 			}
+				
 			//添加其他信息
 			Map<String, Object>extra = new HashMap<>();
 			extra.put("comment_id", comment.getComment_id());
@@ -242,6 +250,10 @@ public class CommentServiceImpl implements CommentService{
 				note.setComment_num(note.getComment_num() + 1);
 				long time = redisUtil.getKeyTime("note_" + secondComment.getNote_id(), TimeUnit.MINUTES);
 				redisUtil.addKey(key, JSON.toJSONString(note), time, TimeUnit.MINUTES);
+				//更新该主人数据库通知数量
+				userDao.updateAddCommentPlus(note.getUser_id());
+				//websocket通知主人更新
+				webSocketHandler.sendMessageToUser(note.getUser_id(),JSON.toJSONString(new SimpleResponse("02",null)));
 			}
 			//redis更新一级评论的信息
 			key = "comment_" + secondComment.getComment_id();

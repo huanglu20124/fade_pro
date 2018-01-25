@@ -120,27 +120,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	    </if>
 	</select>
 	
-	<!-- 嵌套查询，得到对该用户有“贡献”的帖子，一次十条-->
-	<select id="getAddContribute"  resultType="Note">
-	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type 
-	    from note a, user b
-	   where a.target_id in (
-	       select note_id from note where user_id=#{user_id}
-	   )
-	   <if test="start != 0">
-	      and a.note_id&lt;#{start}
-	   </if>
-	   and a.user_id=b.user_id
-	   and a.post_time>=(
-	      select addContributePoint from addmessage where user_id=#{user_id}
-	   )
-	   order by note_id desc
-	   limit 0,10
-	</select>	
-	
+
 	<!-- 得到个人主页的10条原创fade信息，从最新的开始-->
    	<select id="getMyNote" resultType="Note">
-	   select * from note where user_id=#{user_id} 
+	   select a.*,b.nickname,b.head_image_url 
+	   from note a, user b
+	   where a.user_id=#{user_id} 
+	   and a.user_id=b.user_id
 	   and target_id=0
 	   <if test="start != 0">
 	      and note_id&lt;#{start}
@@ -154,4 +140,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   select * from note_image 
 	    where note_id=#{note_id}
 	</select>
+	
+	<!-- 续秒前检查是否已经续过 -->
+	<select id="getNoteQueryChangeSecond" resultType="Integer">
+	    select note_id from note where user_id=#{user_id} and target_id=#{target_id}
+	</select>
+	
+	<!-- 添加一张示例图片，用于通知显示 -->
+	<select id="getOneImage" resultType="String">
+	    select image_url from note_image where note_id=#{note_id} LIMIT 1
+	</select>	
 </mapper>
