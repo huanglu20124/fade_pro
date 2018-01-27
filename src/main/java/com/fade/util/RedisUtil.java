@@ -74,7 +74,7 @@ public class RedisUtil{
 		redisTemplate.opsForList().leftPushAll(array_name, values);
 	}
 
-	public void listRightPushAll(String array_name,List<String>values){
+	public void listRightPushAll(String array_name,Object...values){
 		//插入到队列右边
 		redisTemplate.opsForList().rightPushAll(array_name, values);
 	}	

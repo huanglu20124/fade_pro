@@ -8,7 +8,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   <selectKey keyColumn="note_id" keyProperty="note_id" order="AFTER" resultType="Integer">
 	      SELECT LAST_INSERT_ID()
 	   </selectKey>
-	   insert into note values(null,#{user_id},#{note_content},#{post_time},0,0,0,1,#{target_id},#{type});
+	   insert into note values(null,#{user_id},#{note_content},#{post_time},0,0,0,1,#{target_id},#{type},#{note_area},#{uuid},0);
 	</insert>
 	
 	<!-- 批量插入图片 -->
@@ -63,7 +63,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<!-- 根据帖子id获取一个帖子全部内容，后期这个方法可能要缓存 -->
 	<select id="getNoteById" parameterType="Integer" resultType="Note">
 	    select b.user_id,b.note_id,b.note_content,b.post_time,b.comment_num,
-	           b.add_num, b.sub_num, b.is_die, b.target_id, b.type, a.nickname, a.head_image_url 
+	           b.add_num, b.sub_num, b.is_die, b.target_id, b.type, 
+	           a.nickname, a.head_image_url,b.note_area,b.uuid,b.baseComment_num
 	    from user a, note b
 	    where a.user_id=b.user_id and b.note_id=#{note_id}
 	</select>
@@ -88,8 +89,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	</delete>
 	
 	<!-- 评论数量加一 -->
-	<update id="updateCommentNum" parameterType="Integer">
-	   update note set comment_num = comment_num + 1 where note_id=#{note_id}
+	<update id="updateCommentNum">
+	   update note set comment_num = comment_num + 1 
+	   <if test="type==1">
+	   ,baseComment_num=baseComment_num+1
+	   </if>
+	   where note_id=#{note_id}
 	</update>
 	
 	<!-- 找到用户所有活帖子的id -->

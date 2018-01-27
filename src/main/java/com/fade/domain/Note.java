@@ -27,13 +27,22 @@ public class Note implements Serializable {
 	private List<Image> images;     // 图片集合
 	private Note origin;// 原贴
 
-	private String position; //地理位置
+	private String note_area; //地理位置
 	
 	private Integer baseComment_num; //一级评论数量，后端缓存判断用到，数据库不保存
 	
 	private String exampleImage;//示例图片
 	
+	private String uuid;//后端索引用到的
 	
+	public String getUuid() {
+		return uuid;
+	}
+
+	public void setUuid(String uuid) {
+		this.uuid = uuid;
+	}
+
 	public String getExampleImage() {
 		return exampleImage;
 	}
@@ -42,12 +51,12 @@ public class Note implements Serializable {
 		this.exampleImage = exampleImage;
 	}
 
-	public String getPosition() {
-		return position;
+	public String getNote_area() {
+		return note_area;
 	}
 
-	public void setPosition(String position) {
-		this.position = position;
+	public void setNote_area(String note_area) {
+		this.note_area = note_area;
 	}
 
 	public Note() {
@@ -204,6 +213,9 @@ public class Note implements Serializable {
 		this.fetchTime = fetchTime;
 	}
 
+	
+	
+	
 	//如果note_id相等，则两个帖子相等
 	@Override
 	public int hashCode() {

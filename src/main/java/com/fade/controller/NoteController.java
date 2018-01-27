@@ -52,12 +52,14 @@ public class NoteController {
 		return noteService.changeSecond(JSON.parseObject(note,Note.class));
 	}
 
-	@RequestMapping(value = "/getNotePage/{note_id}", method = RequestMethod.GET)
+	@RequestMapping(value = "/getNotePage/{note_id}/{user_id}/{getFull}", method = RequestMethod.GET)
 	@ResponseBody
-	public String getNotePage(@PathVariable("note_id")Integer note_id) throws FadeException{
+	public String getNotePage(@PathVariable("note_id")Integer note_id,
+			@PathVariable("user_id")Integer user_id,
+			@PathVariable("getFull")Integer getFull) throws FadeException{
 		System.out.println("收到获取详情页的请求");
-		//详情页加载，10条续减一秒，10个评论
-		return noteService.getNotePage(note_id);
+		//详情页加载，10条续减一秒，10个评论.getFull为0只返回note的三个数量及获取时间信息，为1的话返回整个note
+		return noteService.getNotePage(note_id,user_id,getFull);
 	}
 
 	@RequestMapping(value = "/deleteNote/{note_id}/{user_id}", method = RequestMethod.DELETE)
@@ -92,5 +94,13 @@ public class NoteController {
 		System.out.println("获取一个首页完整帖子的请求");
 		return noteService.getFullNote(note_id,user_id);
 	}		
+	
+	@RequestMapping(value = "/searchAliveNote/{keyword}/{page}/{isAlive}/{user_id}",method =  RequestMethod.GET)
+	@ResponseBody	
+	public String searchNote(@PathVariable("keyword")String keyword,@PathVariable("page")Integer page,
+			@PathVariable("isAlive")Integer isAlive, @PathVariable("user_id")Integer user_id){
+		return noteService.searchNote(keyword,page,isAlive,user_id);
+	}
+	
 	
 }

@@ -14,11 +14,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	
 	<!-- 获取一个评论的所有二级评论 -->
 	<select id="getSecondComment" resultType="SecondComment" parameterType="Integer">
-	   select a.nickname,b.*, c.nickname as to_nickname 
-	   from user a, second_comment b, user c
+	   select a.nickname,b.*
+	   from user a, second_comment b
 	   where a.user_id=b.user_id 
 	   and b.comment_id=#{comment_id} 
-	   and c.user_id=b.to_user_id
 	</select>
 	
 	<!-- 根据评论id获取一条评论 -->

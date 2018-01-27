@@ -15,7 +15,7 @@ public interface NoteService {
 
 	String changeSecond(Note note)throws FadeException;
 
-	String getNotePage(Integer note_id) throws FadeException;
+	String getNotePage(Integer note_id,Integer user_id,Integer getFull) throws FadeException;
 
 	String deleteNote(Integer note_id, Integer user_id);
 
@@ -28,4 +28,6 @@ public interface NoteService {
 	void addImage(List<Note> list);
 
 	String getFullNote(Integer note_id, Integer user_id);
+
+	String searchNote(String keyword, Integer page, Integer isAlive,Integer user_id);
 }

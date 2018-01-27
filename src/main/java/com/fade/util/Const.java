@@ -20,6 +20,9 @@ public class Const {
 	//die_list，收集死亡的帖子，每隔一分钟清理一次
 	public static final String DIE_LIST     = "die_list";
 	
+	//收集需要添加到索引数据库的帖子
+	public static final String INDEX_LIST   = "index_list";
+	
 	//融云的app秘钥
 	public static final String RONG_APP_KEY ="0vnjpoad0gn2z";
 	public static final String RONG_APP_SECRET ="Sk52dbUr6eg";

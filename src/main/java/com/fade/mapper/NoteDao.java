@@ -30,7 +30,7 @@ public interface NoteDao {
 	//删除帖子
 	Integer deleteNote(Integer note_id);
 	//评论数量加一
-	Integer updateCommentNum(Integer note_id);
+	Integer updateCommentNum(@Param("note_id")Integer note_id, @Param("type")Integer type);
 	//找到用户所有活帖子的id
 	List<Integer> getUserLiveNote(Integer user_id);
 	//一次查找一百条,活的帖子加入到队列里,返回的Note仅仅包含note_id,target_id(仅限自己的)

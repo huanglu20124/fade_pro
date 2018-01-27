@@ -153,15 +153,15 @@ public class UserTest extends BaseTest {
 		
 	@Test
 	public void testAddNote() throws Exception {
-		for(int i = 0; i < 20; i++){
-			Note note = new Note();
-			note.setUser_id(43);
-			note.setNickname("黄路");
-			note.setNote_content("内容测试"+i + "。有句话说的好，爱的多深就恨得多深，如今当年的科黑和詹黑估计年龄都有25-45岁之间，大多数都已经成熟懂事了，很多人黑着黑着就黑出了感情，其实科比退役的时候已经基本没有科黑了，因为他退役的时候才幡然醒悟，原来一直是爱他的；");
-			note.setPost_time(TimeUtil.getCurrentTime());
-			note.setHead_image_url("image/head/2018-01/83a21c6d-d.png");
-			noteService.addNote(note, null);			
-		}
+		Note note = new Note();
+		note.setUser_id(43);
+		note.setNickname("黄路");
+		note.setNote_content("内容测试3" + "。有句话说的好，爱的多深就恨得多深，如今当年的科黑和詹黑估计年龄都有25-45岁之间，大多数都已经成熟懂事了，很多人黑着黑着就黑出了感情，其实科比退役的时候已经基本没有科黑了，因为他退役的时候才幡然醒悟，原来一直是爱他的；");
+		note.setPost_time(TimeUtil.getCurrentTime());
+		note.setHead_image_url("image/head/2018-01/83a21c6d-d.png");
+		note.setUuid(UUID.randomUUID().toString());
+		noteService.addNote(note, null);	
+		solrService.solrAddUpdateNote(note);
 	}
 
 	@Test
@@ -202,14 +202,16 @@ public class UserTest extends BaseTest {
 
 	@Test
 	public void testAddComment() throws Exception {
-		Comment comment = new Comment();
-		comment.setNote_id(207);
-		comment.setHead_image_url("image/head/2017-12/2c6dc9ec-f.png");
-		comment.setNickname("黄路");
-		comment.setComment_content("这是一级评论");
-		comment.setUser_id(43);
-		comment.setType(0);
-		commentService.addComment(comment); 
+		for(int i = 0; i < 20; i++){
+			Comment comment = new Comment();
+			comment.setNote_id(1127);
+			comment.setHead_image_url("image/head/2018-01/83a21c6d-d.png");
+			comment.setNickname("黄路");
+			comment.setComment_content("这是一级评论" + i);
+			comment.setUser_id(43);
+			comment.setType(0);
+			commentService.addComment(comment); 
+		}
 	}
 	
 	@Test
@@ -243,11 +245,6 @@ public class UserTest extends BaseTest {
 		user.setTelephone("18902356675");
 		System.out.println(userService.loginUser(user));
 	}
-
-	@Test
-	public void testGetNotePage() throws Exception {
-		System.out.println(noteService.getNotePage(114));
-	}
 	
 	@Test
 	public void testSolr() throws Exception {
@@ -273,9 +270,12 @@ public class UserTest extends BaseTest {
 	
     @Test
 	public void testAll() throws Exception {
-    	System.out.println(noteService.getFullNote(1113, 43));
+    	Note note = new Note();
+    	note.setNote_content("xxxxxxxxxxxxx");
+    	redisUtil.addKey("test", note);
+    	note = (Note) redisUtil.getValue("test");
 	}
-    
+      
 /*    @Test
 	public void testUserCF() throws Exception {
     	MysqlDataSource dataSource = new MysqlDataSource();

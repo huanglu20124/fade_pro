@@ -52,93 +52,85 @@ public class CommentServiceImpl implements CommentService{
 		//comment_num用来判断是否还需要查询数据库
 		CommentQuery commentQuery = new CommentQuery();
 		List<Comment>ans_list = new ArrayList<>();
-		Boolean isNeed = true; //是否需要再查询数据库
+		Boolean isNeed = false; //是否需要再查询数据库
 		String search_key = null;
 		int search_id = 0; //下次查询数据库的起点
 		int num = 10; //要从数据库补充的评论条数的数量
 		String note_str = (String) redisUtil.getValue("note_" + note_id);
-		Integer comment_num = 0;
 		String array_name = "list3_" + note_id;
 		List<String>all_keys = redisUtil.listGetAll(array_name);
 		int size = all_keys.size();
-		List<Comment>list = null;
-		if(note_str == null) throw new FadeException("原贴已消失！");
+		Note note = null;
+		int position = 0;
+		boolean isFull = false;//判断是否因为队列长度与评论数量相等而不需要查询
+		if(note_str == null) {
+			note = noteDao.getNoteById(note_id);
+		}
 		else {
 			//优化，先查询帖子的一级评论数量，再判断是否需要查询数据库
-			Note note = JSON.parseObject(note_str, Note.class);
-			comment_num = note.getBaseComment_num();
-			if(comment_num == 0){
-				commentQuery.setStart(0);
-				commentQuery.setList(ans_list);
-				return commentQuery;//评论数量为0
-			}else if (comment_num == size) {
-				//数量绝对够，不用再查询数据库
+			note = JSON.parseObject(note_str, Note.class);
+		}
+		Integer comment_num = note.getBaseComment_num();
+		if(comment_num == 0){
+			commentQuery.setStart(0);
+			commentQuery.setList(ans_list);
+			return commentQuery;//评论数量为0
+		}else if (comment_num == size) {
+			//数量绝对够，不用再查询数据库
+			isFull = true;
+		}
+		
+		if(start == 0){
+			//从头开始找
+			if(size < 10){
+				addCommentToAnsList(ans_list, all_keys, 0, size);
+				if(size > 0){
+					search_key = all_keys.get(size -1);
+					String[] strs = search_key.split("_");
+					search_id = new Integer(strs[1]);
+				}else {
+					search_id = 0;
+				}
+
+				if(!isFull) {
+					isNeed = true;
+					num = 10 - size;
+				}
+			}else {
+				//0到10加入ans_list
+				addCommentToAnsList(ans_list, all_keys, 0, 10);
 				isNeed = false;
 			}
-		}
-
-		if(isNeed){
-			if(start == 0){
-				//第一次加载,从队列里取10条，不够从数据库补
-				if(size == 0){
-					search_id = 0; //代表数据库查询直接取头10条
-					num = 10;
-					isNeed = true;
-				}else if (size < 10) {
-					//为队列最后一个id
-					search_key = all_keys.get(0);
-					String[] strs = search_key.split("_");
-					search_id = new Integer(strs[1]);
-					num = 10 - size;
-					//将已经有的加到ans_list
-					List<String>temps = all_keys.subList(0, size);
-					for(String temp : temps){
-						String comment_str = (String) redisUtil.getValue(temp);
-						if(comment_str != null){
-							ans_list.add(JSON.parseObject(comment_str, Comment.class));
-						}
-					}
-					isNeed = true;
-				}else {
-					//数据量已够
-					isNeed = false;
-				}			
-			}else{
-				//找到该id在队列中的位置
-				int position = 0;
-				String compare_key = "comment_"+start;
-				for(int i = 0; i < size; i++){
-					if(all_keys.get(i).equals(compare_key)){
-						position = i;
-						break;
-					}
+		}else {
+			//找到该id在队列中的位置
+			String compare_key = null;
+			compare_key = "comment_" + start;
+			for(int i = 0; i < size; i++){
+				if(all_keys.get(i).equals(compare_key)){
+					position = i;
+					break;
 				}
-				if(position + 10 <= size){
-					//数量足够
-					isNeed = false;
-				}else {
-					//数量不足
-					search_key = all_keys.get(0);
-					String[] strs = search_key.split("_");
-					search_id = new Integer(strs[1]);
-					num = 10 - (size - position);//补充数量
-					//将已经有的加到ans_list
-					List<String>temps = all_keys.subList(0, position);
-					for(String temp : temps){
-						String comment_str = (String) redisUtil.getValue(temp);
-						if(comment_str != null){
-							ans_list.add(JSON.parseObject(comment_str, Comment.class));
-						}
-					}
-					isNeed = true;
-				}
+			}
+			if(position + 11 <= size){
+				//数量足够
+				isNeed = false;
+				//position+1 到position+11加入ans_list
+				addCommentToAnsList(ans_list, all_keys, position+1, position+11);
+			}else {
+				//数量不足
+				//position+1到size加入ans_list
+				addCommentToAnsList(ans_list, all_keys, position+1, size);
+				search_key = all_keys.get(size - 1);//最后一个作为searchkey
+				String[] strs = search_key.split("_");
+				search_id = new Integer(strs[1]);
+				num = 10 - (size - position);//补充数量
+				isNeed = true;
 			}
 		}
 		
-		if(isNeed){
-			//反过来
-			Collections.reverse(ans_list);
-			list = commentDao.getTenComment(note_id,search_id,num); 
+		if(isNeed && !isFull){
+			//需要查询数据库
+			List<Comment>list = commentDao.getTenComment(note_id,search_id,num); 
 			getSecondComment(list);//添加二级评论
 			if(list.size() > 0) {
 				ans_list.addAll(list);
@@ -150,37 +142,12 @@ public class CommentServiceImpl implements CommentService{
 					redisUtil.addKey("comment_" + comment.getComment_id(), JSON.toJSONString(comment),15l,TimeUnit.MINUTES);
 				}
 				logger.info("将以下评论加入队列:" +  keys.toArray());
-				redisUtil.listLeftPushAll(array_name, keys.toArray());
+				redisUtil.listRightPushAll(array_name, keys.toArray());
 				//重新设置队列持续时间为15分钟
 				redisUtil.setKeyTime(array_name, 15l, TimeUnit.MINUTES);
 			}
-		}else {
-			List<String>ten_keys = null;
-			if(size >= 10){
-				ten_keys = all_keys.subList(0, 10);
-			}else {
-				ten_keys = all_keys.subList(0, size);
-			}
-			//要反过来，从早到晚
-			Collections.reverse(ten_keys);
-		    for(String key: ten_keys){
-				String comment_str = (String) redisUtil.getValue(key);
-				if(comment_str != null){
-					Comment temp = JSON.parseObject(comment_str, Comment.class);
-					ans_list.add(temp);
-				}else {
-					//为空的话，从数据库查询，并加到缓存里
-					String[]strs = key.split("_");
-					Comment temp = commentDao.getCommentById(new Integer(strs[1]));
-					if(temp != null){
-						//假如还在的话
-						temp.setComments(commentDao.getSecondComment(temp.getComment_id()));
-						redisUtil.addKey(key, JSON.toJSONString(temp), 15l, TimeUnit.MINUTES);
-					}
-				}
-		    }
 		}
-		int flag = 10;
+		int flag = 0;
 		if(ans_list.size() > 0){
 			flag = ans_list.get(ans_list.size() - 1).getComment_id();		
 		}
@@ -189,10 +156,35 @@ public class CommentServiceImpl implements CommentService{
 		return commentQuery;
 	}
 	
+	
+	private void addCommentToAnsList(List<Comment>ans_list,List<String>all_keys, 
+			Integer start, Integer end ){
+		//将队列已存在的comment加到队列里(包括start，不包括end)，同时添加二级评论
+		if(end <= all_keys.size() && start <= all_keys.size()){
+			List<String>keys = all_keys.subList(start,end);
+			for(String key : keys){
+				String comment_str = (String) redisUtil.getValue(key);
+				if(comment_str != null){
+					ans_list.add(JSON.parseObject(comment_str,Comment.class));
+				}else {
+					String[]strs = key.split("_");
+					ans_list.add(commentDao.getCommentById(new Integer(strs[1])));
+				}
+			}
+			getSecondComment(ans_list);		
+		}	
+	}
+	
 	private void getSecondComment(List<Comment>comments){
 		//为所有评论添加二级评论
 		for(Comment comment : comments){
-			comment.setComments(commentDao.getSecondComment(comment.getComment_id()));
+			List<SecondComment>secondComments = commentDao.getSecondComment(comment.getComment_id());
+			for(SecondComment secondComment : secondComments){
+				if(secondComment.getTo_user_id() != null){
+					secondComment.setTo_nickname(userDao.getNickname(secondComment.getTo_user_id()));
+				}
+			}
+			comment.setComments(secondComments);
 		}
 		
 	}
@@ -205,7 +197,7 @@ public class CommentServiceImpl implements CommentService{
 		if(comment.getComment_id() != null){
 			response.setSuccess("添加评论成功");
 			//更新帖子的评论数量
-			noteDao.updateCommentNum(comment.getNote_id());
+			noteDao.updateCommentNum(comment.getNote_id(),1);
 			//redis对应也要更新
 			String key = "note_" + comment.getNote_id();
 			String note_str = (String) redisUtil.getValue(key);
@@ -241,7 +233,7 @@ public class CommentServiceImpl implements CommentService{
 		if(secondComment.getComment_id() != null){
 			response.setSuccess("添加评论成功");
 			//更新帖子的评论数量
-			noteDao.updateCommentNum(secondComment.getNote_id());
+			noteDao.updateCommentNum(secondComment.getNote_id(),2);
 			//redis更新帖子信息
 			String key = "note_" + secondComment.getNote_id();
 			String note_str = (String) redisUtil.getValue(key);
@@ -260,6 +252,11 @@ public class CommentServiceImpl implements CommentService{
 			String comment_str = (String) redisUtil.getValue(key);
 			if(comment_str != null){
 				Comment comment = JSON.parseObject(comment_str, Comment.class);
+				//设置一个空的数组
+				if(comment.getComments() == null){
+					List<SecondComment>comments = new ArrayList<>();
+					comment.setComments(comments);
+				}
 				comment.getComments().add(secondComment);
 				redisUtil.addKey(key, JSON.toJSONString(comment), 15l, TimeUnit.MINUTES);
 			}

@@ -86,6 +86,8 @@ public interface UserDao {
 	public List<User> getOldFans(@Param("user_id")Integer user_id, @Param("start")Integer start);
 	//查看更多，查看以前的评论
 	public List<Comment> getOldComment(@Param("user_id")Integer user_id, @Param("start")Integer start);
+	//获得用户昵称
+	public String getNickname(Integer to_user_id);
 	
 	
 }

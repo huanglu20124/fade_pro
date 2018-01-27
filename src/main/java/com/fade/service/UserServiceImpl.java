@@ -143,6 +143,10 @@ public class UserServiceImpl implements UserService {
 		JSONObject temp = new JSONObject(str);
 		String wechat_id = temp.getString("openid");
 		user.setWechat_id(wechat_id);
+		//学校id，没有的话设置为默认的中大
+		if(user.getSchool_id() == null){
+			user.setSchool_id(1);
+		}
 		String url = null;
 		if((url = user.getHead_image_url()) != null){
 			//将url保存到本地
@@ -241,6 +245,10 @@ public class UserServiceImpl implements UserService {
 		user.setFade_name(fade_name);
 		user.setRegister_time(TimeUtil.getCurrentTime());
 		user.setUuid(uuid);
+		//学校id，没有的话设置为默认的中大
+		if(user.getSchool_id() == null){
+			user.setSchool_id(1);
+		}
 		// 设置盐，MD5加密，散列一次
 		String salt = UUID.randomUUID().toString().substring(0, 5);
 		String password_md5 = new Md5Hash(user.getPassword(), salt, 1).toString();
@@ -365,18 +373,17 @@ public class UserServiceImpl implements UserService {
 						|| (!origin_head_url.equals(origin.getHead_image_url()))){
 					//找到用户所有活帖子的id
 					List<Integer>live_ids = noteDao.getUserLiveNote(user.getUser_id());
-					String note_str = null;
 					String key = null;
+					Note temp = null;
 					for(Integer note_id : live_ids){
 						key = "note_" + note_id;
-						note_str = (String) redisUtil.getValue(key);
-						if(note_str != null){
+						temp = (Note) redisUtil.getValue(key);
+						if(temp != null){
 							//说明该帖子的确是活的
-							Note temp = JSON.parseObject(note_str, Note.class);
 							temp.setNickname(origin.getNickname());
 							temp.setHead_image_url(origin.getHead_image_url());
 							long time = redisUtil.getKeyTime(key, TimeUnit.MINUTES);
-							redisUtil.addKey(key, JSON.toJSONString(temp), time, TimeUnit.MINUTES);
+							redisUtil.addKey(key, temp, time, TimeUnit.MINUTES);
 						}
 					}
 					//删除redis中所有该用户的一级评论

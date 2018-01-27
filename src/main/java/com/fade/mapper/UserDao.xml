@@ -233,7 +233,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 
 	<!-- 获取新增贡献，嵌套查询，得到对该用户有“贡献”的帖子-->
 	<select id="getAddContribute"  resultType="Note">
-	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type 
+	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type, a.target_id 
 	    from note a, user b
 	   where a.target_id in (
 	       select note_id from note where user_id=#{user_id}
@@ -266,7 +266,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	
 	<!-- 查看更多，查看以前的贡献 -->
 	<select id="getOldContribute" resultType="Note">
-	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type 
+	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type, a.target_id  
 	    from note a, user b
 	   where a.target_id in (
 	       select note_id from note where user_id=#{user_id}
@@ -344,5 +344,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<insert id="addPreference">
 	   insert into preference values(#{user_id},#{note_id},#{score},null);
 	</insert>
+	
+	<!-- 获得用户昵称 -->
+	<select id="getNickname"  resultType="String">
+	    select nickname from user where user_id=#{to_user_id}
+	</select>
 	
 </mapper>
