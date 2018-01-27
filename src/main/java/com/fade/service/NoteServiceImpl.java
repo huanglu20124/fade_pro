@@ -131,7 +131,7 @@ public class NoteServiceImpl implements NoteService {
 		noteDao.addNoteImageBatch(note);
 		//添加到redis中，初始时间为15分钟,注意key的格式 ，转发贴的key和原贴的key不同
 		String key = "note_" + note.getNote_id();
-		redisUtil.addKey(key, JSON.toJSONString(note), Const.DEFAULT_LIFE, TimeUnit.MINUTES);
+		redisUtil.addKey(key, note, Const.DEFAULT_LIFE, TimeUnit.MINUTES);
 		//添加到热门推送排行榜
 		redisUtil.zsetAddKey(Const.HOT_NOTES, key, 0d);
 		// 找到所有在线的粉丝，然后将它们的list2更新(这个后期要考虑优化，因为粉丝数量可能很大)
@@ -160,11 +160,11 @@ public class NoteServiceImpl implements NoteService {
 		Long time = System.currentTimeMillis();
 		String array_name = "list1_"+user_id;//队列名字		
 		//先直接查找前100 条，直到凑成10条 (仿票圈)，start=0的时候，定义为初次加载，先要清除redis缓存
-/*		if(start == 0){
-			//清除缓存先
+		if(start == 0){
+			//首次加载，清除缓存先
 			redisUtil.deleteKey(array_name);
 			redisUtil.deleteKey("list2_" + user_id);
-		}*/
+		}
 		List<Note>ans_list = new ArrayList<>();
 		int count = 0;
 		//找出起点之后的全部帖子,起始是0
@@ -189,8 +189,8 @@ public class NoteServiceImpl implements NoteService {
 				if(strs.length == 3){
 					//说明这是转发贴，还要判断原贴存不存在
 					String origin_key = "note_"+strs[2];
-					String origin_str = (String)redisUtil.getValue(origin_key);
-					if(origin_str == null){
+					Note origin = (Note)redisUtil.getValue(origin_key);
+					if(origin == null){
 						//原贴不存在，则都销毁原贴以及这个贴
 						redisUtil.deleteKey(origin_key);
 						die_ids.add(strs[1]);
@@ -200,7 +200,6 @@ public class NoteServiceImpl implements NoteService {
 					}else {
 						//原贴存在的话，从数据库查询转发贴，并加上原贴，这里要考虑缓存
 						Note note = noteDao.getNoteById(new Integer(strs[1]));
-						Note origin = JSON.parseObject(origin_str,Note.class);
 						origin.setFetchTime(time);
 						note.setOrigin(origin);
 						note.setFetchTime(time);
@@ -210,9 +209,8 @@ public class NoteServiceImpl implements NoteService {
 					}
 				}else { 
 					//原创帖，直接从redis中获取
-					String note_str = (String)redisUtil.getValue(key);
-					if(note_str != null){
-						Note temp = JSON.parseObject(note_str, Note.class);
+					Note temp = (Note)redisUtil.getValue(key);
+					if(temp != null){
 						temp.setFetchTime(time);
 						ans_list.add(temp);
 						count++;
@@ -250,11 +248,10 @@ public class NoteServiceImpl implements NoteService {
 			for(Note note : notes){
 				if(note.getTarget_id() == 0){
 					//说明是原创帖
-					String note_str = (String)redisUtil.getValue("note_" + note.getNote_id());
-					if(note_str != null){
+					Note temp = (Note)redisUtil.getValue("note_" + note.getNote_id());
+					if(temp != null){
 						//帖子还没挂，加入到队列里(count小于10的时候)
 						if(count < 10){
-							Note temp = JSON.parseObject(note_str, Note.class);
 							temp.setFetchTime(time);
 							ans_list.add(temp);
 							count++;
@@ -269,14 +266,13 @@ public class NoteServiceImpl implements NoteService {
 					}
 				}else {
 					//转发帖，还需要先判断原创帖在不在
-					String origin_str = (String)redisUtil.getValue("note_" + note.getTarget_id());
-					if(origin_str == null){
+					Note origin = (Note)redisUtil.getValue("note_" + note.getTarget_id());
+					if(origin == null){
 						//该帖加入到死亡列表
 						die_ids.add(note.getNote_id().toString());
 					}else {
 						//获得该帖的信息，加入到队列
 						Note relay = noteDao.getNoteById(note.getNote_id());
-						Note origin = JSON.parseObject(origin_str, Note.class);
 						origin.setFetchTime(time);
 						relay.setOrigin(origin);
 						relay.setFetchTime(time);
@@ -321,7 +317,11 @@ public class NoteServiceImpl implements NoteService {
 	public String getMoreNote(Integer user_id, List<Note>updateList) {
 		//顶部下拉刷新
 		NoteQuery query = new NoteQuery();
-		List<Note>add_notes = getAddNote(user_id);
+		Integer lastId = 0;
+		if(updateList.size() > 0){
+			lastId = updateList.get(0).getNote_id();
+		}
+		List<Note>add_notes = getAddNote(user_id,lastId,updateList);
 		//返回更新信息
 		checkIsDie(updateList);
 /*		if(add_notes.size() < 10){
@@ -352,9 +352,8 @@ public class NoteServiceImpl implements NoteService {
 				randomArray = randomArray(0, list.size() -1, list.size());
 			}
 			for(int randomNum : randomArray){
-				String orgin_str = (String) redisUtil.getValue(list.get(randomNum));
-				if(orgin_str != null){
-					Note origin = JSON.parseObject(orgin_str, Note.class);
+				Note origin = (Note) redisUtil.getValue(list.get(randomNum));
+				if(origin != null){
 					if(set.size() > 0){
 					    while (!set.contains(origin)) {
 					    	ansNotes.add(origin);
@@ -371,7 +370,7 @@ public class NoteServiceImpl implements NoteService {
 		return ansNotes;
 	}
 
-	private List<Note> getAddNote(Integer user_id) {
+	private List<Note> getAddNote(Integer user_id, Integer lastId,List<Note>updateList) {
 		//从list2队列中取出新增的
 		String array_name = "list2_" + user_id;
 		List<Note>notes = new ArrayList<>();
@@ -380,35 +379,61 @@ public class NoteServiceImpl implements NoteService {
 		//增加此刻时间
 		Long time = System.currentTimeMillis();
 		int count = 0;
-		for(String key : keys){
-			String[]strs = key.split("_");
-			if(strs.length == 3){
-				//如果是转发帖
-				String origin_str = (String)redisUtil.getValue("note_" + strs[2]);
-				if(origin_str == null){
-					die_ids.add(new Integer(strs[1])); 
-				}else {
-					Note origin = JSON.parseObject(origin_str, Note.class);
-					origin.setFetchTime(time);
-					Note note = noteDao.getNoteById(new Integer(strs[1]));
-					note.setOrigin(origin);
-					note.setFetchTime(time);
-					notes.add(note);
-					count++;
-				}
-			}else {
-				//如果是原创帖
-				String note_str = (String)redisUtil.getValue(key);
-				if(note_str != null){
-					Note temp = JSON.parseObject(note_str, Note.class);
-					temp.setFetchTime(time);
-					notes.add(temp);
-					count++;
+		if(keys.size() == 0){
+			//list2队列为空，直接到数据库查询
+			List<Note>addIds = noteDao.getAddNote(user_id,0);//addIds仅仅包含有note_id和target_id
+			Set<Note>updateNotes = new HashSet<Note>();//用于检查重复
+			updateNotes.addAll(updateList);
+			for(Note note : addIds){
+				if(!updateNotes.contains(note)){
+					if(note.getTarget_id() == 0){
+						//原创帖
+						note = (Note)redisUtil.getValue("note_" +note.getNote_id());
+						note.setFetchTime(time);
+						notes.add(note);
+					}else {
+						//转发帖
+						Note origin = (Note) redisUtil.getValue("note_" + note.getTarget_id());
+						if(origin == null){
+							die_ids.add(new Integer(note.getTarget_id())); 
+						}else {
+							origin.setFetchTime(time);
+							note.setOrigin(origin);
+							note.setFetchTime(time);
+							notes.add(note);
+						}
+					}
 				}
 			}
-			redisUtil.listLeftPop(array_name);//弹出队列，以免下次又刷新到
-			if(count == 10){
-				break;
+		}else{
+			for(String key : keys){
+				String[]strs = key.split("_");
+				if(strs.length == 3){
+					//如果是转发帖
+					Note origin = (Note)redisUtil.getValue("note_" + strs[2]);
+					if(origin == null){
+						die_ids.add(new Integer(strs[1])); 
+					}else {
+						origin.setFetchTime(time);
+						Note note = noteDao.getNoteById(new Integer(strs[1]));
+						note.setOrigin(origin);
+						note.setFetchTime(time);
+						notes.add(note);
+						count++;
+					}
+				}else {
+					//如果是原创帖
+					Note temp = (Note)redisUtil.getValue(key);
+					if(temp != null){
+						temp.setFetchTime(time);
+						notes.add(temp);
+						count++;
+					}
+				}
+				redisUtil.listLeftPop(array_name);//弹出队列，以免下次又刷新到
+				if(count == 10){
+					break;
+				}
 			}
 		}
 		return notes;
@@ -418,8 +443,8 @@ public class NoteServiceImpl implements NoteService {
 	public String changeSecond(Note note) throws FadeException{
 		//增和减秒的请求，实则是增加帖子
 		if(note == null || note.getTarget_id() == null || note.getTarget_id() == 0) throw new FadeException("请求格式不正确！");
-		String origin_str = (String)redisUtil.getValue("note_" + note.getTarget_id());
-		if(origin_str == null) throw new FadeException("操作失败，原贴已失效！");
+		Note origin = (Note)redisUtil.getValue("note_" + note.getTarget_id());
+		if(origin == null) throw new FadeException("操作失败，原贴已失效！");
 		//续秒前检查是否已经续过
 		Integer noteTempId = noteDao.getNoteQueryChangeSecond(note.getUser_id(),note.getTarget_id());
 		if(noteTempId != null)  throw new FadeException("操作失败，已经续过秒");
@@ -432,7 +457,6 @@ public class NoteServiceImpl implements NoteService {
 		//存储到数据库
 		noteDao.addNote(note);	
 		//原贴加秒和减秒数量要更新，原贴生存时间更新
-		Note origin = JSON.parseObject(origin_str, Note.class);
 		Integer add_sum = origin.getAdd_num();
 		Integer sub_sum = origin.getSub_num();
 		if(note.getType() == 1){
@@ -468,7 +492,7 @@ public class NoteServiceImpl implements NoteService {
 		logger.info("续一秒成功，原贴" + origin.getNote_id() + "的剩余时间为" + time_left + "分钟");
 		//原主人的通知数量+1
 		userDao.updateContributePlus(origin.getUser_id());
-		redisUtil.addKey("note_"+origin.getNote_id(), JSON.toJSONString(origin),time_left, TimeUnit.MINUTES);
+		redisUtil.addKey("note_"+origin.getNote_id(), origin,time_left, TimeUnit.MINUTES);
 		//websocket通知原主人
 		webSocketHandler.sendMessageToUser(origin.getUser_id(), JSON.toJSONString(new SimpleResponse("00", null)));
 		//转发帖只存入数据库，不添加到redis中
@@ -527,16 +551,14 @@ public class NoteServiceImpl implements NoteService {
 		Long time = System.currentTimeMillis();
 		//更新已加载过的数据，若不存在的话，is_die设置为0
 		Note note = null;
-		String origin_str = null;
 		Note origin = null;
 		for(Note temp : updateList){
 			 if(temp.getTarget_id() != null && temp.getTarget_id() != 0){
 				 //假如是转发的,更新的是origin的信息
-				 origin_str = (String) redisUtil.getValue("note_" + temp.getTarget_id());
-					if(origin_str != null){
+				 origin = (Note) redisUtil.getValue("note_" + temp.getTarget_id());
+					if(origin != null){
 						note = new Note();
 						//还存活
-						origin = JSON.parseObject(origin_str, Note.class);
 						note.setAdd_num(origin.getAdd_num());
 						note.setSub_num(origin.getSub_num());
 						note.setComment_num(origin.getComment_num());
@@ -550,9 +572,8 @@ public class NoteServiceImpl implements NoteService {
 						temp.setIs_die(0);
 					}
 			 }else {
-				 origin_str = (String)redisUtil.getValue("note_" + temp.getNote_id());
-				 if(origin_str != null){
-					 origin = JSON.parseObject(origin_str, Note.class);
+				 origin = (Note)redisUtil.getValue("note_" + temp.getNote_id());
+				 if(origin != null){
 					 temp.setNote_id(origin.getNote_id());
 					 temp.setAdd_num(origin.getAdd_num());
 					 temp.setSub_num(origin.getSub_num());
@@ -568,15 +589,12 @@ public class NoteServiceImpl implements NoteService {
 	
 	@Override
 	public String getNotePage(Integer note_id,Integer user_id,Integer getFull) throws FadeException {
-		String note_str = (String) redisUtil.getValue("note_" + note_id);
-		if(note_str == null) {
+		Note note = (Note) redisUtil.getValue("note_" + note_id);
+		if(note == null) {
 			redisUtil.setAddKey(Const.DIE_LIST, note_id.toString());
 			//throw new FadeException("该帖子已消失");
 		}
-		Note note = null;
-		if(note_str != null){
-			note = JSON.parseObject(note_str, Note.class);
-		}else {
+		if(note == null){
 			note = noteDao.getNoteById(note_id);
 		}
 		Integer query_id = null;

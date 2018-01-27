@@ -155,4 +155,25 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<select id="getOneImage" resultType="String">
 	    select image_url from note_image where note_id=#{note_id} LIMIT 1
 	</select>	
+	
+	<!-- 首页信息流，获取全部新增的帖子， 返回的Note仅仅包含note_id,target_id-->
+	<select id="getAddNote" resultType="Note">
+	    <if test="start != 0">
+	    	    select distinct b.note_id, b.target_id
+	    	    from relation a, note b
+	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or (b.user_id=#{user_id} and b.target_id=0))
+	                   and b.is_die=1 
+	                   and b.note_id>#{start}
+	                   order by note_id desc
+	    </if>
+	    
+	    <if test="start == 0">
+	    	    select distinct b.note_id,b.target_id 
+	    	    from relation a, note b
+	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or (b.user_id=#{user_id} and b.target_id=0))
+	                   and b.is_die=1 
+	                   order by note_id desc	                       
+	    </if>
+	</select>	
+	
 </mapper>

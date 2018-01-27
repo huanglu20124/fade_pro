@@ -68,6 +68,9 @@ public class User implements Serializable{
 	//融云聊天需要的Token
 	private String MessageToken; 
 	
+	//是否已经关注了这个人
+	private Integer isConcern;
+	
 	public Integer getFade_num() {
 		return fade_num;
 	}
@@ -228,6 +231,12 @@ public class User implements Serializable{
 	}
 	public void setMessageToken(String messageToken) {
 		MessageToken = messageToken;
+	}
+	public Integer getIsConcern() {
+		return isConcern;
+	}
+	public void setIsConcern(Integer isConcern) {
+		this.isConcern = isConcern;
 	}
 
 	

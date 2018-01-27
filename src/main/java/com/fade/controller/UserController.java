@@ -178,10 +178,10 @@ public class UserController {
 		return userService.getAddComment(user_id, start,point);
 	}
 	
-	@RequestMapping(value = "/searchUser/{keyword}/{page}",method =  RequestMethod.GET)
+	@RequestMapping(value = "/searchUser/{keyword}/{start}",method =  RequestMethod.GET)
 	@ResponseBody	
-	public String searchUser(@PathVariable("keyword")String keyword, @PathVariable("page")Integer page){
-		return userService.searchUser(keyword,page);
+	public String searchUser(@PathVariable("keyword")String keyword, @PathVariable("start")Integer start){
+		return userService.searchUser(keyword,start);
 	}
 	
 	@RequestMapping(value = "/getRecommendUser/{user_id}/{page}",method =  RequestMethod.GET)

@@ -219,7 +219,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 		
 	<!-- 通知相关： 获取新增粉丝 -->
 	<select id="getAddFans" resultType="User">
-	    select a.user_id, a.nickname, a.head_image_url, b.relation_time, b.relation_id
+	    select a.user_id, a.nickname, a.head_image_url, a.summary, b.relation_time, b.relation_id
 	    from user a, relation b where 
 	   <if test="start != 0">
 	      b.relation_id&lt;#{start} and 
@@ -231,10 +231,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   limit 0,20
 	</select>
 
-	<!-- 获取新增贡献，嵌套查询，得到对该用户有“贡献”的帖子-->
+	<!-- 获取新增贡献，嵌套查询，得到对该用户有“贡献”的帖子，直接把原创帖的信息赋值给了转发帖-->
 	<select id="getAddContribute"  resultType="Note">
-	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type, a.target_id 
-	    from note a, user b
+	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type, a.target_id,c.note_content 
+	    from note a, user b, note c
 	   where a.target_id in (
 	       select note_id from note where user_id=#{user_id}
 	   )
@@ -243,6 +243,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   </if>
 	   and a.user_id=b.user_id
 	   and a.post_time>=#{point}
+	   and c.note_id=a.target_id
 	   order by note_id desc
 	   limit 0,20
 	</select>
@@ -250,8 +251,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 
 	<!-- 获取新增评论，用于通知页只返回一级评论 -->
 	<select id="getAddComment"  resultType="Comment">
-	    select a.user_id,a.head_image_url,a.nickname,b.comment_content,b.comment_time,b.comment_id
-	    from user a, comment b
+	    select a.user_id,a.head_image_url,a.nickname,
+	    b.comment_content,b.comment_time,b.comment_id,c.note_content
+	    from user a, comment b, note c
 	    where b.note_id in (
 	       select note_id from note where user_id=#{user_id}
 	    )
@@ -260,14 +262,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   </if> 
 	   and b.comment_time>=#{point}
 	   and a.user_id=b.user_id
+	   and b.note_id=c.note_id
 	   order by comment_id desc
 	   limit 0, 20
 	</select>
 	
 	<!-- 查看更多，查看以前的贡献 -->
 	<select id="getOldContribute" resultType="Note">
-	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type, a.target_id  
-	    from note a, user b
+	   select a.note_id,a.user_id, b.head_image_url, b.nickname, a.post_time, a.type, a.target_id, c.note_content
+	    from note a, user b, note c
 	   where a.target_id in (
 	       select note_id from note where user_id=#{user_id}
 	   )
@@ -275,6 +278,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	      and a.note_id&lt;#{start}
 	   </if>
 	   and a.user_id=b.user_id
+	   and c.note_id=a.target_id
 	   order by note_id desc
 	   limit 0,20	   
 	</select>
@@ -282,7 +286,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 		
 	<!-- 查看更多，查看以前的粉丝 -->
 	<select id="getOldFans" resultType="User">
-	    select a.user_id, a.nickname, a.head_image_url, b.relation_time, b.relation_id
+	    select a.user_id, a.nickname, a.head_image_url,  a.summary, b.relation_time, b.relation_id
 	    from user a, relation b where 
 	    b.user_fans=a.user_id
 	   <if test="start != 0">
@@ -295,8 +299,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 		
 	<!-- 查看以前评论-->
 	<select id="getOldComment"  resultType="Comment">
-	    select a.user_id,a.head_image_url,a.nickname,b.comment_content,b.comment_time,b.comment_id
-	    from user a, comment b
+	    select a.user_id,a.head_image_url,a.nickname,
+	    b.comment_content,b.comment_time,b.comment_id, c.note_content
+	    from user a, comment b, note c
 	    where b.note_id in (
 	       select note_id from note where user_id=#{user_id}
 	    )
@@ -304,6 +309,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	      and b.comment_id&lt;#{start} 
 	   </if> 
 	   and a.user_id=b.user_id
+	   and c.note_id=b.note_id
 	   order by comment_id desc
 	   limit 0, 20
 	</select>

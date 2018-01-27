@@ -1,5 +1,6 @@
 package com.fade.mapper;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Param;
@@ -44,6 +45,8 @@ public interface NoteDao {
 	Integer getNoteQueryChangeSecond(@Param("user_id")Integer user_id, @Param("target_id")Integer target_id);
 	//添加一张示例图片，用于通知显示
 	String getOneImage(Integer note_id);
+	//首页信息流，获取全部新增的帖子
+	List<Note> getAddNote(@Param("user_id")Integer user_id, @Param("start")Integer start);
 	
 	
 }

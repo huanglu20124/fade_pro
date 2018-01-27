@@ -6,6 +6,7 @@ import static org.junit.Assert.*;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -40,6 +41,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.alibaba.fastjson.JSON;
 import com.fade.controller.UserController;
 import com.fade.domain.Comment;
+import com.fade.domain.CommentQuery;
 import com.fade.domain.Note;
 import com.fade.domain.SecondComment;
 import com.fade.domain.User;
@@ -270,10 +272,18 @@ public class UserTest extends BaseTest {
 	
     @Test
 	public void testAll() throws Exception {
-    	Note note = new Note();
-    	note.setNote_content("xxxxxxxxxxxxx");
-    	redisUtil.addKey("test", note);
-    	note = (Note) redisUtil.getValue("test");
+    	File file = new File("C:/Users/road/Desktop/json.txt");
+    	FileWriter writer = new FileWriter(file);
+    	if(file.exists()){
+    		writer.write("");
+    	}else {
+			file.createNewFile();
+		}
+    	String str = JSON.toJSONString(noteDao.getMuchMyNoteId(60, 0));
+    	System.out.println(str);
+    	writer.write(str);
+    	writer.flush();
+    	writer.close();
 	}
       
 /*    @Test

@@ -95,11 +95,11 @@ public class NoteController {
 		return noteService.getFullNote(note_id,user_id);
 	}		
 	
-	@RequestMapping(value = "/searchAliveNote/{keyword}/{page}/{isAlive}/{user_id}",method =  RequestMethod.GET)
+	@RequestMapping(value = "/searchNote/{keyword}/{start}/{isAlive}/{user_id}",method =  RequestMethod.GET)
 	@ResponseBody	
-	public String searchNote(@PathVariable("keyword")String keyword,@PathVariable("page")Integer page,
+	public String searchNote(@PathVariable("keyword")String keyword,@PathVariable("start")Integer start,
 			@PathVariable("isAlive")Integer isAlive, @PathVariable("user_id")Integer user_id){
-		return noteService.searchNote(keyword,page,isAlive,user_id);
+		return noteService.searchNote(keyword,start,isAlive,user_id);
 	}
 	
 	

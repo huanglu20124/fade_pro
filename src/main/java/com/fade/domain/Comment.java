@@ -17,8 +17,23 @@ public class Comment implements Serializable{
 	private List<SecondComment>comments;//二级评论列表
 	private Integer type; //0代表增秒评论，1代表减秒评论
 	
+	//以下是用于通知显示的属性
 	private String exampleImage;//示例图片
+	private String note_content;//文字内容
+	
 
+	public String getExampleImage() {
+		return exampleImage;
+	}
+	public void setExampleImage(String exampleImage) {
+		this.exampleImage = exampleImage;
+	}
+	public String getNote_content() {
+		return note_content;
+	}
+	public void setNote_content(String note_content) {
+		this.note_content = note_content;
+	}
 	public Integer getComment_id() {
 		return comment_id;
 	}

@@ -97,7 +97,7 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public String loginWechat(String wechat_id) throws FadeException {
-		logger.info("准备注册的微信wechat_id="+wechat_id);
+		logger.info("准备登录的微信wechat_id="+wechat_id);
 		//User user = userDao.getUserByOpenIdQuery(wechat_id, 0);
 		User user = userDao.getUserByOpenId(wechat_id, 0);
 		if (user == null)
@@ -121,6 +121,7 @@ public class UserServiceImpl implements UserService {
 		// 如果客户端本地没有检测到，则发送小程序code、以及一些用户信息到服务器，服务器请求得到openid，返回给小程序
 		String str = null;
 		logger.info("js_code=" + js_code + "请求注册账号,用户信息为=" + JSON.toJSONString(user));
+		Map<String, Object>ansMap = new HashMap<>();
 		try {
 			URL url = new URL("https://api.weixin.qq.com/sns/jscode2session?appid=" + Const.APP_ID + "&secret="
 					+ Const.AppSecret + "&js_code=" + js_code + "&grant_type=authorization_code");
@@ -170,26 +171,24 @@ public class UserServiceImpl implements UserService {
 		User userQuery = null;
 		if ((userQuery = userDao.getUserByOpenId(wechat_id, 0)) == null) {
 			userDao.addUser(user);// user_id设置到user对象中
+			userDao.addMessage(user.getUser_id());//到新增消息队列里“注册”
 			//添加到索引数据库
 			user.setUuid(uuid);
 			solrService.solrAddUpdateUser(user);
 			// 新建tokenModel并返回
-			Map<String, Object> map = new HashMap<>();
 			TokenModel model = tokenUtil.createTokenModel(user.getUser_id());
-			map.put("tokenModel", model);
+			user.setTokenModel(model);
+			//补充一些默认信息
+			user.setFade_num(0);
+			user.setFans_num(0);
+			user.setConcern_num(0);
 			logger.info("wechat_id=" + wechat_id + ",user_id=" + user.getUser_id() + " 注册登录成功");
 			//redis上线
 			redisUtil.setAddKey(Const.ONLINE_USERS, "user_"+user.getUser_id());
-			//返回部分信息
-			Map<String, Object> extra = new HashMap<>();
-			extra.put("tokenModel", model);
-			extra.put("register_time", user.getRegister_time());
-			extra.put("fade_name", user.getFade_name());
-			extra.put("wechat_id", user.getWechat_id());
-			extra.put("head_image_url", user.getHead_image_url());
-			return JSON.toJSONString(extra);
+			//返回全部信息	
+			ansMap.put("user", user);
+			return JSON.toJSONString(ansMap);
 		}else {
-			Map<String, Object>ansMap = new HashMap<>();
 			//因为是首次登陆，所以要返回tokenModel
 			TokenModel model = tokenUtil.createTokenModel(userQuery.getUser_id());
 			userQuery.setTokenModel(model);
@@ -543,7 +542,8 @@ public class UserServiceImpl implements UserService {
 		}
 		//添加示例图片
 		for(Note note : list){
-			note.setExampleImage(noteDao.getOneImage(note.getNote_id()));
+			//因为这些都是转发帖啊
+			note.setExampleImage(noteDao.getOneImage(note.getTarget_id()));
 		}
 		query.setList(list);
 		if(list.size() > 0) query.setStart(list.get(list.size() -1).getNote_id());
@@ -568,6 +568,15 @@ public class UserServiceImpl implements UserService {
 		}else {
 			list = userDao.getAddFans(user_id,start,point);
 		}
+		//检查对粉丝的关注情况
+		for(User user : list){
+			if(userDao.getRelation(user.getUser_id(),user_id) != null){
+				user.setIsConcern(1);
+			}else {
+				user.setIsConcern(0);
+			}
+		}
+		
 		query.setList(list);
 		if(list.size() > 0) query.setStart(list.get(list.size() -1).getUser_id());
 		else {
@@ -590,6 +599,11 @@ public class UserServiceImpl implements UserService {
 			userDao.initAddMessage(user_id,2);
 		}else {
 			list = userDao.getAddComment(user_id,start,point);
+		}
+		query.setPoint(point);
+		for(Comment comment : list){
+			//查询图片
+			comment.setExampleImage(noteDao.getOneImage(comment.getNote_id()));
 		}
 		query.setList(list);
 		if(list.size() > 0) query.setStart(list.get(list.size() -1).getComment_id());
@@ -693,7 +707,7 @@ public class UserServiceImpl implements UserService {
 		List<Note>list = userDao.getOldContribute(user_id,start);
 		//添加示例图片
 		for(Note note : list){
-			note.setExampleImage(noteDao.getOneImage(note.getNote_id()));
+			note.setExampleImage(noteDao.getOneImage(note.getTarget_id()));
 		}
 		query.setList(list);
 		if(list.size() > 0) query.setStart(list.get(list.size() - 1).getNote_id());
@@ -707,6 +721,15 @@ public class UserServiceImpl implements UserService {
 	public String getOldFans(Integer user_id, Integer start) {
 		UserQuery query = new UserQuery();
 		List<User>list = userDao.getOldFans(user_id,start);
+		//检查对粉丝的关注情况
+		for(User user : list){
+			if(userDao.getRelation(user.getUser_id(),user_id) != null){
+				user.setIsConcern(1);
+			}else {
+				user.setIsConcern(0);
+			}
+		}
+		
 		query.setList(list);
 		if(list.size() > 0) query.setStart(list.get(list.size() - 1).getUser_id());
 		else {
@@ -744,8 +767,8 @@ public class UserServiceImpl implements UserService {
             byte[] buffer = new byte[1204];
             while ((byteread = inStream.read(buffer)) != -1) {
                 fs.write(buffer, 0, byteread);
-                logger.info("保存文件成功，路径为" + localPath );
             }
+            logger.info("保存文件成功，路径为" + localPath );
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
