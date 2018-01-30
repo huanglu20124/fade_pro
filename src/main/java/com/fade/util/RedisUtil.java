@@ -45,13 +45,18 @@ public class RedisUtil{
 	}
 	
 	public List<String> listGetAll(String array_name) {
-		//得到整个队列
+		//得到整个队列，一项为String
 		List<Object> origins=  redisTemplate.opsForList().range(array_name, 0l, -1l);
 		List<String>keys = new ArrayList<>();
 		for(Object object : origins){
 			keys.add((String)object);
 		}
 		return keys;
+	}
+	
+	public List<Object> listGetAllObject(String array_name) {
+		//得到整个队列，返回原来的Object
+		return redisTemplate.opsForList().range(array_name, 0l, -1l);
 	}
 
 	public List<String> listGetRange(String array_name,Long start,Long end) {
@@ -158,4 +163,7 @@ public class RedisUtil{
 		}
 		return list;
 	}
+	
+	
+
 }

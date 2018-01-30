@@ -48,4 +48,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	    select comment_id from comment where user_id=#{user_id}
 	</select>
 	
+	<!-- 添加一条评论消息类 -->
+	<insert id="addCommentMessage" parameterType="CommentMessage">
+	   <selectKey keyColumn="message_id" keyProperty="message_id" order="AFTER" resultType="Integer">
+	      SELECT LAST_INSERT_ID()
+	   </selectKey>
+	   insert into commentmessage values
+	   (null,#{comment_content},#{from_id},#{to_id},#{comment_id},#{second_id},#{note_id},#{comment_time});
+	</insert>
+	
 </mapper>

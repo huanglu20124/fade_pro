@@ -13,7 +13,7 @@ import com.fade.util.Const;
 import com.fade.util.RedisUtil;
 
 public class IndexTask extends TimerTask{
-	//将帖子添加到索引数据库的服务
+	//更新索引数据库死帖子服务
 	private RedisUtil redisUtil;
 	private Logger logger;
 	private NoteDao noteDao;
@@ -28,18 +28,18 @@ public class IndexTask extends TimerTask{
 	
 	@Override 
 	public void run() {
-		//查询队列
+		//把死贴更新到solr中
 		List<String>list = redisUtil.listGetAll(Const.INDEX_LIST);
 		Note note = null;
 		for(String idStr : list){
 			note = noteDao.getNoteById(new Integer(idStr));
 			if(note.getUuid() != null){
+				note.setIs_die(0);//设置死亡
 				solrService.solrAddUpdateNote(note);
+				logger.info("索引清理贴" + idStr);
 			}		
 			redisUtil.listRemoveValue(Const.INDEX_LIST, idStr);
-		}
-		//最后清空
-		
+		}	
 	}
 
 }

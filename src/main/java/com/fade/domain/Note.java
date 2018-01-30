@@ -35,6 +35,8 @@ public class Note implements Serializable {
 	
 	private String uuid;//后端索引用到的
 	
+	private Long liveTime;//存活时间，死贴专有属性
+	
 	public String getUuid() {
 		return uuid;
 	}
@@ -214,8 +216,14 @@ public class Note implements Serializable {
 	}
 
 	
-	
-	
+	public Long getLiveTime() {
+		return liveTime;
+	}
+
+	public void setLiveTime(Long liveTime) {
+		this.liveTime = liveTime;
+	}
+
 	//如果note_id相等，则两个帖子相等
 	@Override
 	public int hashCode() {

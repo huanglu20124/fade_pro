@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Param;
 
 import com.fade.domain.AddMessage;
 import com.fade.domain.Comment;
+import com.fade.domain.CommentMessage;
 import com.fade.domain.Note;
 import com.fade.domain.User;
 
@@ -77,17 +78,30 @@ public interface UserDao {
 	//嵌套查询，得到对该用户有“贡献”的帖子
 	List<Note> getAddContribute(@Param("user_id")Integer user_id, 
 			@Param("start")Integer start,@Param("point")String point);
-	//用于通知页只返回一级评论,一次10条
-	List<Comment> getAddComment(@Param("user_id")Integer user_id,
+	//用于通知页只返回评论通知,一次20条
+	List<CommentMessage> getAddComment(@Param("user_id")Integer user_id,
 			@Param("start")Integer start,@Param("point")String point);
 	//查看更多，查看以前的贡献
 	public List<Note> getOldContribute(@Param("user_id")Integer user_id, @Param("start")Integer start);
 	//查看更多，查看以前的粉丝
 	public List<User> getOldFans(@Param("user_id")Integer user_id, @Param("start")Integer start);
 	//查看更多，查看以前的评论
-	public List<Comment> getOldComment(@Param("user_id")Integer user_id, @Param("start")Integer start);
+	public List<CommentMessage> getOldComment(@Param("user_id")Integer user_id, @Param("start")Integer start);
 	//获得用户昵称
 	public String getNickname(Integer to_user_id);
+	//添加对自己点赞的记录
+	public void addMySecond(@Param("user_id")Integer user_id,
+			@Param("note_id")Integer note_id, @Param("type")Integer type, @Param("post_time")String post_time);
+	//查询自己是否对自己的帖子续秒
+	Integer getIsMySecond(@Param("user_id")Integer user_id, @Param("note_id")Integer note_id);
+	//获得推荐用户字段
+	public String getRecommendUser(Integer user_id);
+	//查询主人对帖子的续秒情况
+	public Note getMyAddSecondNote(@Param("note_id")Integer note_id, @Param("user_id")Integer user_id);
+	//个人页，分页查询20条粉丝
+	public List<User> getFans(@Param("user_id")Integer user_id, @Param("start")int start);
+	//个人页，分页查询20条关注者
+	public List<User> getConcerns(@Param("user_id")Integer user_id, @Param("start")int start);
 	
 	
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
 import com.fade.domain.Comment;
+import com.fade.domain.CommentMessage;
 import com.fade.domain.SecondComment;
 
 public interface CommentDao {
@@ -26,5 +27,8 @@ public interface CommentDao {
 
 	//获得一个用户的所有一级评论的id
 	List<Integer> getUserAllComment(Integer user_id);
+
+	//添加一条评论消息类
+	Integer addCommentMessage(CommentMessage message);
 
 }

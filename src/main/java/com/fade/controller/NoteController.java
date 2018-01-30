@@ -1,6 +1,8 @@
  package com.fade.controller;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -8,8 +10,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.HttpServletBean;
+
 import com.alibaba.fastjson.JSON;
 import com.fade.domain.Note;
+import com.fade.domain.TokenModel;
 import com.fade.exception.FadeException;
 import com.fade.service.NoteService;
 
@@ -46,10 +51,14 @@ public class NoteController {
 
 	@RequestMapping(value = "/changeSecond", method = RequestMethod.POST)
 	@ResponseBody
-	public String changeSecond(String note) throws FadeException{
+	public String changeSecond(HttpServletRequest request,  String note) throws FadeException{
 		System.out.println("收到增减秒的请求");
+		//特殊处理，通过tokenModel里面的user_id判断是否是本人
+	    String tokenModelStr = request.getHeader("tokenModel");
+	    TokenModel model = JSON.parseObject(tokenModelStr,TokenModel.class);
 		//增和减秒的请求，实则是增加帖子,需要发的属性有user_id,nickname,target_id,type,head_image_url 
-		return noteService.changeSecond(JSON.parseObject(note,Note.class));
+		return noteService.changeSecond(JSON.parseObject(note, Note.class),
+				model.getUser_id());
 	}
 
 	@RequestMapping(value = "/getNotePage/{note_id}/{user_id}/{getFull}", method = RequestMethod.GET)
@@ -73,7 +82,7 @@ public class NoteController {
 	@RequestMapping(value = "/getMyNote/{user_id}/{start}", method = RequestMethod.GET)
 	@ResponseBody
 	public String getMyNote(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
-		//获取个人帖子信息的请求，10条一次
+		//获取个人原创帖子信息的请求，10条一次
 		System.out.println("获取个人帖子信息的请求");
 		return noteService.getMyNote(user_id,start);
 	}	
@@ -82,11 +91,20 @@ public class NoteController {
 	@ResponseBody
 	public String getOtherPersonNote(@PathVariable("user_id")Integer user_id,@PathVariable("my_id")Integer my_id,
 			@PathVariable("start")Integer start){
-		//获取个人帖子信息的请求，10条一次
+		//获取个人原创帖子信息的请求，10条一次
 		System.out.println("获取他人帖子信息的请求");
 		return noteService.getOtherPersonNote(user_id,my_id,start);
 	}	
 
+	@RequestMapping(value = "/getLiveNote/{user_id}/{my_id}/{start}", method = RequestMethod.GET)
+	@ResponseBody
+	public String getLiveNote(@PathVariable("user_id")Integer user_id,@PathVariable("my_id")Integer my_id,
+			@PathVariable("start")Integer start){
+		//获取自己活着他人的动态帖子
+		System.out.println("获取自己活着他人的动态帖子的请求");
+		return JSON.toJSONString(noteService.getLiveNote(user_id,my_id,start));
+	}	
+	
 	@RequestMapping(value = "/getFullNote/{note_id}/{user_id}", method = RequestMethod.GET)
 	@ResponseBody
 	public String getFullNote(@PathVariable("note_id")Integer note_id,@PathVariable("user_id")Integer user_id){

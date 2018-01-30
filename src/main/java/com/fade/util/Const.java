@@ -36,7 +36,10 @@ public class Const {
 	public static final double COMMENT_SCORE = 1; //评论一次加1
 	public static final double FAV_SCORE = 1; //收藏一次加2
 	
-	
+	//list1个人帖子加载队列, list1_ + user_id
+	//list2个人新帖子加载队列,list2_ + user_id
+	//list3帖子评论加载队列, list3_ + note_id
+	//list4详情页续秒增秒列表加载队列，其中为0的代表的是帖子本人点赞，需要再查询本人的信息,list4_ + note_id
 	
 	
 	

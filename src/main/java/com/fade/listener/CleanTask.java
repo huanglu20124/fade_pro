@@ -30,8 +30,11 @@ public class CleanTask extends TimerTask{
 		List<Integer>die_ids = new ArrayList<>();
 		for(String id_str : die_list){
 			die_ids.add(new Integer(id_str));
+			logger.info("数据库清理贴" + id_str);
 			//从热门榜中清除
 			redisUtil.zsetDeleteKey(Const.HOT_NOTES, "note_"+id_str);
+			//添加到索引数据库更新队列,更新is_die
+			redisUtil.listRightPush(Const.INDEX_LIST, id_str);
 		}
 		if(die_ids.size() > 0) noteDao.updateNoteDie(die_ids);
 		//logger.info("清理完成，清理的帖子有" + die_list);

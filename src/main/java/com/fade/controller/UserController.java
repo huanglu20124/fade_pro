@@ -134,9 +134,10 @@ public class UserController {
 	@RequestMapping(value = "/getPersonPage/{user_id}/{my_id}",method =  RequestMethod.GET)
 	@ResponseBody
 	public String getPersonPage(@PathVariable("user_id")Integer user_id,@PathVariable("my_id")Integer my_id){
+		//请求自己和他人的个人页,如果是自己的个人页，则user_id和my_id都填自己的
 		return userService.getPersonPage(user_id,my_id);
 	}
-	
+
 	@RequestMapping(value = "/getHeadImageUrl",method =  RequestMethod.POST)
 	@ResponseBody
 	public String getHeadImageUrl(String telephone,String fade_name,String wechat_id){
@@ -184,11 +185,11 @@ public class UserController {
 		return userService.searchUser(keyword,start);
 	}
 	
-	@RequestMapping(value = "/getRecommendUser/{user_id}/{page}",method =  RequestMethod.GET)
+	@RequestMapping(value = "/getRecommendUser/{user_id}/{start}",method =  RequestMethod.GET)
 	@ResponseBody	
-	public String getRecommendUser(@PathVariable("user_id")Integer user_id, @PathVariable("page")Integer page){
-		//感兴趣用户，20条一次地加载，上限100个
-		return userService.getTwentyRecommendUser(user_id,page);
+	public String getRecommendUser(@PathVariable("user_id")Integer user_id, @PathVariable("start")Integer start){
+		//感兴趣用户，分页，要设置上限，目前60个
+		return userService.getTenRecommendUser(user_id,start);
 	}
 	
 	//从融云处获取token
@@ -221,6 +222,18 @@ public class UserController {
 		return userService.getOldComment(user_id, start);
 	}
 	
+	@RequestMapping(value = "/getFans/{user_id}/{start}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getFans(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+		//个人页，分页查询20条粉丝
+		return userService.getFans(user_id, start);
+	}	
 	
 	
+	@RequestMapping(value = "/getConcerns/{user_id}/{start}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getConcerns(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+		//个人页，分页查询20条关注者
+		return userService.getConcerns(user_id, start);
+	}		
 }

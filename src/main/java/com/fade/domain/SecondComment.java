@@ -15,6 +15,7 @@ public class SecondComment implements Serializable{
 	private String comment_content;
 	private Integer note_id;
 	
+	private Integer first_id;//一级评论者的id, 前端发给后端的
 	
 	public Integer getSecond_id() {
 		return second_id;
@@ -69,6 +70,12 @@ public class SecondComment implements Serializable{
 	}
 	public void setNote_id(Integer note_id) {
 		this.note_id = note_id;
+	}
+	public Integer getFirst_id() {
+		return first_id;
+	}
+	public void setFirst_id(Integer first_id) {
+		this.first_id = first_id;
 	}
 	
 	

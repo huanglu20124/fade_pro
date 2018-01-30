@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.alibaba.fastjson.JSON;
 import com.fade.domain.Comment;
+import com.fade.domain.CommentMessage;
 import com.fade.domain.CommentQuery;
 import com.fade.domain.Note;
 import com.fade.domain.SecondComment;
@@ -141,7 +142,7 @@ public class CommentServiceImpl implements CommentService{
 					//单个key的持续时间为15分钟
 					redisUtil.addKey("comment_" + comment.getComment_id(), comment,15l,TimeUnit.MINUTES);
 				}
-				logger.info("将以下评论加入队列:" +  keys.toArray());
+				//logger.info("将以下评论加入队列:" +  keys.toArray());
 				redisUtil.listRightPushAll(array_name, keys.toArray());
 				//重新设置队列持续时间为15分钟
 				redisUtil.setKeyTime(array_name, 15l, TimeUnit.MINUTES);
@@ -155,7 +156,6 @@ public class CommentServiceImpl implements CommentService{
 		commentQuery.setList(ans_list);
 		return commentQuery;
 	}
-	
 	
 	private void addCommentToAnsList(List<Comment>ans_list,List<String>all_keys, 
 			Integer start, Integer end ){
@@ -207,9 +207,20 @@ public class CommentServiceImpl implements CommentService{
 				long time = redisUtil.getKeyTime("note_" + comment.getNote_id(), TimeUnit.MINUTES);
 				redisUtil.addKey(key, note, time, TimeUnit.MINUTES);
 				//websocket通知主人更新
-				//更新该主人数据库通知数量
-				userDao.updateAddCommentPlus(note.getUser_id());
-				webSocketHandler.sendMessageToUser(note.getUser_id(),JSON.toJSONString(new SimpleResponse("02",null)));
+				//更新该主人数据库通知数量，假如不是自己对自己评论
+				if(comment.getUser_id() != note.getUser_id()){
+					userDao.updateAddCommentPlus(note.getUser_id());
+					webSocketHandler.sendMessageToUser(note.getUser_id(),JSON.toJSONString(new SimpleResponse("02",null)));
+					//创建评论通知消息
+					CommentMessage message = new CommentMessage();
+					message.setComment_content(comment.getComment_content());
+					message.setFrom_id(comment.getUser_id());
+					message.setTo_id(note.getUser_id());
+					message.setNote_id(note.getNote_id());
+					message.setComment_id(comment.getComment_id());
+					message.setComment_time(comment.getComment_time());
+					commentDao.addCommentMessage(message);
+				}
 			}
 				
 			//添加其他信息
@@ -240,10 +251,32 @@ public class CommentServiceImpl implements CommentService{
 				note.setComment_num(note.getComment_num() + 1);
 				long time = redisUtil.getKeyTime("note_" + secondComment.getNote_id(), TimeUnit.MINUTES);
 				redisUtil.addKey(key, note, time, TimeUnit.MINUTES);
+				if(note.getUser_id() != secondComment.getUser_id()){
+					
+				}
 				//更新该主人数据库通知数量
 				userDao.updateAddCommentPlus(note.getUser_id());
+				//准备生产消息类
+				CommentMessage message = new CommentMessage();
+				message.setComment_content(secondComment.getComment_content());
+				message.setSecond_id(secondComment.getSecond_id());
+				message.setFrom_id(secondComment.getUser_id());
+				message.setNote_id(secondComment.getNote_id());
+				message.setComment_time(secondComment.getComment_time());
 				//websocket通知主人更新
-				webSocketHandler.sendMessageToUser(note.getUser_id(),JSON.toJSONString(new SimpleResponse("02",null)));
+				if(secondComment.getTo_user_id() != null && secondComment.getTo_user_id() != secondComment.getUser_id()){
+					//通知to_user_id
+					webSocketHandler.sendMessageToUser(secondComment.getTo_user_id(),JSON.toJSONString(new SimpleResponse("02",null)));
+					message.setTo_id(secondComment.getTo_user_id());
+					//添加评论消息类
+					commentDao.addCommentMessage(message);
+				}else if(secondComment.getFirst_id() != null && secondComment.getFirst_id() != secondComment.getUser_id()){
+					//通知所属的一级评论者first_id
+					webSocketHandler.sendMessageToUser(secondComment.getFirst_id(),JSON.toJSONString(new SimpleResponse("02",null)));
+					message.setTo_id(secondComment.getFirst_id());
+					//添加评论消息类
+					commentDao.addCommentMessage(message);
+				}
 			}
 			//redis更新一级评论的信息
 			key = "comment_" + secondComment.getComment_id();

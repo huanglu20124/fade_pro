@@ -54,15 +54,9 @@ public class FadeExceptionResolver implements HandlerExceptionResolver {
 	        StringBuffer sb = new StringBuffer();
 	        sb.append(e.getMessage() + " ");
 	        //错误信息限定在前5行
-	        if(ste.length <= 10){
-		        for (int i = 0; i < ste.length; i++) {
-			          sb.append(ste[i].toString() + "\r\n");
-			        }
-	        }else {
-		        for (int i = 0; i < 5; i++) {
-			          sb.append(ste[i].toString() + "\r\n");
-			        }
-			}
+		     for (int i = 0; i < ste.length; i++) {
+			         sb.append(ste[i].toString() + "\r\n");
+			  }
 	        return sb.toString();
 	    }
 }

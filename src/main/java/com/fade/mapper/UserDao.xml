@@ -250,21 +250,19 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	
 
 	<!-- 获取新增评论，用于通知页只返回一级评论 -->
-	<select id="getAddComment"  resultType="Comment">
-	    select a.user_id,a.head_image_url,a.nickname,
-	    b.comment_content,b.comment_time,b.comment_id,c.note_content
-	    from user a, comment b, note c
-	    where b.note_id in (
-	       select note_id from note where user_id=#{user_id}
-	    )
-	   <if test="start != 0">
-	      and b.comment_id&lt;#{start} 
-	   </if> 
-	   and b.comment_time>=#{point}
-	   and a.user_id=b.user_id
-	   and b.note_id=c.note_id
-	   order by comment_id desc
-	   limit 0, 20
+	<select id="getAddComment"  resultType="CommentMessage">
+	  select a.*, b.nickname as from_nickname, b.head_image_url as from_head,
+	  c.note_content
+	  from commentmessage a, user b, note c
+	  where a.note_id=c.note_id
+	  and a.to_id=#{user_id}
+	  and a.from_id=b.user_id
+	  <if test="start != 0">
+	     and a.message_id&lt;#{start}
+	  </if>
+	  and a.comment_time>=#{point}
+	  order by message_id desc
+	  limit 0,20
 	</select>
 	
 	<!-- 查看更多，查看以前的贡献 -->
@@ -298,20 +296,18 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	</select>
 		
 	<!-- 查看以前评论-->
-	<select id="getOldComment"  resultType="Comment">
-	    select a.user_id,a.head_image_url,a.nickname,
-	    b.comment_content,b.comment_time,b.comment_id, c.note_content
-	    from user a, comment b, note c
-	    where b.note_id in (
-	       select note_id from note where user_id=#{user_id}
-	    )
-	   <if test="start != 0">
-	      and b.comment_id&lt;#{start} 
-	   </if> 
-	   and a.user_id=b.user_id
-	   and c.note_id=b.note_id
-	   order by comment_id desc
-	   limit 0, 20
+	<select id="getOldComment"  resultType="CommentMessage">
+	  select a.*, b.nickname as from_nickname, b.head_image_url as from_head,
+	  c.note_content
+	  from commentmessage a, user b, note c
+	  where a.note_id=c.note_id
+	  and a.to_id=#{user_id}
+	  and a.from_id=b.user_id
+	  <if test="start != 0">
+	     and a.message_id&lt;#{start}
+	  </if>
+	  order by message_id desc
+	  limit 0,20
 	</select>
 		
 		
@@ -356,4 +352,56 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	    select nickname from user where user_id=#{to_user_id}
 	</select>
 	
+	<!-- 查询自己是否对自己的帖子续秒 -->
+	<select id="getIsMySecond" resultType="Integer">
+	   select type from myadd_second where user_id=#{user_id} and note_id=#{note_id}
+	</select>
+	
+	<!-- 添加对自己点赞的记录 -->
+	<insert id="addMySecond">
+	   insert into myadd_second values(#{note_id},#{user_id},#{type},#{post_time});
+	</insert>
+	
+	<!-- 获得推荐用户字段 -->
+	<select id="getRecommendUser" resultType="String">
+	   select recommendUser from user where user_id=#{user_id}
+	</select>
+	
+	<!-- 查询主人对帖子的续秒情况 -->
+	<select id="getMyAddSecondNote" resultType="Note">
+	   select a.*, b.nickname, b.head_image_url
+	   from myadd_second a, user b
+	   where a.user_id=b.user_id
+	   and a.user_id=#{user_id}
+	   and a.note_id=#{note_id}
+	</select>
+	
+	<!-- 个人页，分页查询20条粉丝 -->
+	<select id="getFans" resultType="User">
+		select a.user_id, a.telephone, a.fade_name, a.nickname, 
+		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
+		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, 
+		 b.school_name
+		from user a, school b, relation c
+		where
+		a.school_id=b.school_id
+		and a.user_id=c.user_fans
+		and c.user_star=#{user_id}
+		limit #{start},20	
+	</select>
+		
+	<!-- 个人页，分页查询20条关注者 -->
+	<select id="getConcerns" resultType="User">
+		select a.user_id, a.telephone, a.fade_name, a.nickname, 
+		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
+		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, 
+		 b.school_name
+		from user a, school b, relation c
+		where
+		a.school_id=b.school_id
+		and a.user_id=c.user_star
+		and c.user_fans=#{user_id}
+		limit #{start},20
+	</select>
+		
 </mapper>

@@ -20,7 +20,6 @@ public class Comment implements Serializable{
 	//以下是用于通知显示的属性
 	private String exampleImage;//示例图片
 	private String note_content;//文字内容
-	
 
 	public String getExampleImage() {
 		return exampleImage;

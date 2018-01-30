@@ -5,9 +5,9 @@ import java.util.List;
 public class NoteQuery {
 	private Integer start; // 向下加载查询的起点，一开始填0
 	private List<Note> list;// 查询得到的新数据
-	private List<Note> updateList;// 已加载的帖子 再 经过服务器查询筛选出来的剩余贴子
-	
+	private List<Note> updateList;// 已加载的帖子 再 经过服务器查询筛选出来的剩余贴子(主页用的属性)
 	private String point;//通知页面查询时间点
+	private Integer sum;//搜索页用（返回的搜索结果总数量，上限50条）
 	
 	public Integer getStart() {
 		return start;
@@ -40,6 +40,15 @@ public class NoteQuery {
 
 	public void setPoint(String point) {
 		this.point = point;
+	}
+
+	
+	public Integer getSum() {
+		return sum;
+	}
+
+	public void setSum(Integer sum) {
+		this.sum = sum;
 	}
 
 	

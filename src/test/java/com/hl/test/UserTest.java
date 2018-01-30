@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 import javax.annotation.Resource;
 
+import org.apache.ibatis.ognl.InappropriateExpressionException;
 import org.apache.mahout.cf.taste.impl.common.LongPrimitiveIterator;
 import org.apache.mahout.cf.taste.impl.model.MySQLJDBCIDMigrator;
 import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
@@ -41,6 +43,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.alibaba.fastjson.JSON;
 import com.fade.controller.UserController;
 import com.fade.domain.Comment;
+import com.fade.domain.CommentMessage;
 import com.fade.domain.CommentQuery;
 import com.fade.domain.Note;
 import com.fade.domain.SecondComment;
@@ -179,7 +182,7 @@ public class UserTest extends BaseTest {
 			note.setNickname("Huanglu");
 			note.setTarget_id(445);
 			note.setType(1);
-			System.out.println(noteService.changeSecond(note));
+			System.out.println(noteService.changeSecond(note,43));
 		}
 	}
 	
@@ -271,19 +274,22 @@ public class UserTest extends BaseTest {
     }
 	
     @Test
+	public void testAddCommentMessage() throws Exception {
+    	for(int i = 0; i < 20; i++){
+    		CommentMessage message = new CommentMessage();
+    		message.setComment_content("xxx");
+    		message.setFrom_id(45);
+    		message.setTo_id(43);
+    		message.setComment_id(502);
+    		message.setComment_time(TimeUtil.getCurrentTime());
+    		message.setNote_id(1205);
+    		commentDao.addCommentMessage(message);
+    	}
+	}
+    
+    @Test
 	public void testAll() throws Exception {
-    	File file = new File("C:/Users/road/Desktop/json.txt");
-    	FileWriter writer = new FileWriter(file);
-    	if(file.exists()){
-    		writer.write("");
-    	}else {
-			file.createNewFile();
-		}
-    	String str = JSON.toJSONString(noteDao.getMuchMyNoteId(60, 0));
-    	System.out.println(str);
-    	writer.write(str);
-    	writer.flush();
-    	writer.close();
+    	testWrite(noteService.getTenRelayNote(1418, 47, 0), true);
 	}
       
 /*    @Test
@@ -360,4 +366,23 @@ public class UserTest extends BaseTest {
 	       return result;  
 	}  
  
+	private void testWrite(Object data, Boolean toJson) throws IOException{
+    	File file = new File("C:/Users/road/Desktop/json.txt");
+    	FileWriter writer = new FileWriter(file);
+    	if(file.exists()){
+    		writer.write("");
+    	}else {
+			file.createNewFile();
+		}
+    	String str = null;
+    	if(toJson){
+    		str = JSON.toJSONString(data);
+    	}else {
+			str = (String) data;
+		}
+    	System.out.println(str);
+    	writer.write(str);
+    	writer.flush();
+    	writer.close();
+	}
 }

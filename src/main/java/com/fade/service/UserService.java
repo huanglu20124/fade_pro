@@ -46,7 +46,7 @@ public interface UserService {
 
 	String searchUser(String keyword, Integer page);
 
-	String getTwentyRecommendUser(Integer user_id, Integer page);
+	String getTenRecommendUser(Integer user_id, Integer page);
 
 	String getMessageToken(Integer user_id)throws FadeException;
 
@@ -57,5 +57,9 @@ public interface UserService {
 	String getOldComment(Integer user_id, Integer start);
 
 	void downloadPic(String url, String localPath);
+
+	String getFans(Integer user_id, Integer start);
+
+	String getConcerns(Integer user_id, Integer start);
 
 }

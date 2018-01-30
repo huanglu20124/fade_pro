@@ -35,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.alibaba.fastjson.JSON;
 import com.fade.domain.AddMessage;
 import com.fade.domain.Comment;
+import com.fade.domain.CommentMessage;
 import com.fade.domain.CommentQuery;
 import com.fade.domain.Image;
 import com.fade.domain.Note;
@@ -479,27 +480,18 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public String getPersonPage(Integer user_id, Integer my_id) {
 		PersonPage page = new PersonPage();
+		NoteQuery query = noteService.getLiveNote(user_id, my_id, 0);
+		page.setQuery(query);
+		boolean isMy = user_id == my_id ? true : false;
 		User user = userDao.getSimpleUserById(user_id);//获取部分用户信息
 		page.setUser(user);
-		if(userDao.getRelation(user_id,my_id) != null){
-			page.setIsConcern(1);
-		}else {
-			page.setIsConcern(0);
-		}
-		NoteQuery query = new NoteQuery();
-		List<Note>notes = noteDao.getMyNote(user_id,0);
-		//图片数据
-		for(Note note : notes){
-			List<Image>images = noteDao.getNoteImage(note.getNote_id());
-			note.setImages(images);
-		}
-		checkAction(notes, user_id);
-		query.setList(notes);
-		int size = notes.size();
-		if(size == 0) query.setStart(0);
-		else {
-			query.setStart(notes.get(size -1).getNote_id());
-		}
+		if(!isMy){
+			if(userDao.getRelation(user_id,my_id) != null){
+				page.setIsConcern(1);
+			}else {
+				page.setIsConcern(0);
+			}
+		}		
 		return JSON.toJSONString(page);
 	}
 
@@ -588,71 +580,68 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public String getAddComment(Integer user_id,Integer start,String point) {
 		//start=0,首次查询，返回时间点； 之后请求必须携带该时间点
-		CommentQuery query = new CommentQuery();
-		List<Comment>list = null;
+		Map<String,Object>ansMap = new HashMap<>();
+		List<CommentMessage>list = null;
 		if(start == 0){
 			//查询时间点
 			point = userDao.getAddPoint(user_id,2);
-			query.setStart(0);
 			list = userDao.getAddComment(user_id,start,point);
 			//粉丝队列初始化
 			userDao.initAddMessage(user_id,2);
 		}else {
 			list = userDao.getAddComment(user_id,start,point);
 		}
-		query.setPoint(point);
-		for(Comment comment : list){
+		ansMap.put("point", point);
+		for(CommentMessage commentMessage : list){
 			//查询图片
-			comment.setExampleImage(noteDao.getOneImage(comment.getNote_id()));
+			commentMessage.setExampleImage(noteDao.getOneImage(commentMessage.getNote_id()));
 		}
-		query.setList(list);
-		if(list.size() > 0) query.setStart(list.get(list.size() -1).getComment_id());
-		else {
-			query.setStart(0);
+		ansMap.put("list", list);
+		if(list.size() > 0) {
+			ansMap.put("start", list.get(list.size() -1).getMessage_id());
+		}else {
+			ansMap.put("start", 0);
 		}
-		return JSON.toJSONString(query);
+		return JSON.toJSONString(ansMap);
 	}
 
 	@Override
 	public String searchUser(String keyword, Integer page) {
 		//调用solr数据库，分页查询
-		List<User>users = solrService.getTenUserKeyword(keyword,page);
-		UserQuery query = new UserQuery();
-		query.setStart(++page);
-		query.setList(users);
-		return JSON.toJSONString(query);
+		return JSON.toJSONString(solrService.getTenUserKeyword(keyword,page));
 	}
 	
-	private void checkAction(List<Note>notes, Integer user_id){
-		//增加是否续或者减的属性
-		for(Note note : notes){
-			Integer type = null;
-			if(note.getTarget_id() != 0){
-				//转发帖，查询是否对原贴点赞
-				type = noteDao.getNoteCheckAction(user_id,note.getTarget_id());
-			}else {
-				type = noteDao.getNoteCheckAction(user_id,note.getNote_id());
-			}
-			if(type == null){
-				//还没操作过
-				note.setAction(0);
-			}else if (type == 1) {
-				//增
-				note.setAction(1);
-			}else if (type == 2) {
-				//减
-				note.setAction(2);
+	@Override
+	public String getTenRecommendUser(Integer user_id, Integer start) {
+		UserQuery query = new UserQuery();
+		List<User>list = new ArrayList<>();
+		List<Integer>getIds = null;
+		//推荐用户是一个字段
+		String recommendIdStr = userDao.getRecommendUser(user_id);
+		int flag = start*10;
+		int end = flag + 10;
+		if(recommendIdStr != null){
+			List<Integer>ids = JSON.parseArray(recommendIdStr, Integer.class);
+			int size = ids.size();
+			if(flag < size){
+				if(end <= size){
+					getIds = ids.subList(flag, end);
+				}else {
+					getIds = ids.subList(flag, size);
+				}	
 			}
 		}
+		if(getIds != null){
+			for(Integer id : getIds){
+				list.add(userDao.getUserById(id));
+			}
+		}
+		start++;
+		query.setList(list);
+		query.setStart(start);
+		return JSON.toJSONString(query);
 	}
 
-	@Override
-	public String getTwentyRecommendUser(Integer user_id, Integer page) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	
 	@Override
 	public String getMessageToken(Integer user_id) throws FadeException{
 		//先查询用户信息
@@ -700,7 +689,6 @@ public class UserServiceImpl implements UserService {
 		}
 	}
 
-	
 	@Override
 	public String getOldContribute(Integer user_id, Integer start) {
 		NoteQuery query = new NoteQuery();
@@ -740,14 +728,21 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public String getOldComment(Integer user_id, Integer start) {
-		CommentQuery query = new CommentQuery();
-		List<Comment>list = userDao.getOldComment(user_id,start);
-		query.setList(list);
-		if(list.size() > 0) query.setStart(list.get(list.size() - 1).getComment_id());
-		else {
-			query.setStart(0);
-		}	
-		return JSON.toJSONString(query);
+		//start=0,首次查询，返回时间点； 之后请求必须携带该时间点
+		Map<String,Object>ansMap = new HashMap<>();
+		List<CommentMessage>list = null;
+		list = userDao.getOldComment(user_id,start);
+		for(CommentMessage commentMessage : list){
+			//查询图片
+			commentMessage.setExampleImage(noteDao.getOneImage(commentMessage.getNote_id()));
+		}
+		ansMap.put("list", list);
+		if(list.size() > 0) {
+			ansMap.put("start", list.get(list.size() -1).getMessage_id());
+		}else {
+			ansMap.put("start", 0);
+		}
+		return JSON.toJSONString(ansMap);
 	}
 	
 	public void downloadPic(String url, String localPath){
@@ -781,5 +776,35 @@ public class UserServiceImpl implements UserService {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	
+	@Override
+	public String getFans(Integer user_id, Integer start) {
+		//个人页，分页查询20条粉丝
+		UserQuery query = new UserQuery();
+		List<User>list = userDao.getFans(user_id,start*20);
+		//检查对粉丝的关注情况
+		for(User user : list){
+			if(userDao.getRelation(user.getUser_id(),user_id) != null){
+				user.setIsConcern(1);
+			}else {
+				user.setIsConcern(0);
+			}
+		}
+		query.setList(list);
+		query.setStart(++start);
+		return JSON.toJSONString(list);
+	}
+	
+
+	@Override
+	public String getConcerns(Integer user_id, Integer start) {
+		//个人页，分页查询20条关注者
+		UserQuery query = new UserQuery();
+		List<User>list = userDao.getConcerns(user_id,start*20);
+		query.setList(list);
+		query.setStart(++start);
+		return JSON.toJSONString(list);
 	}
 }

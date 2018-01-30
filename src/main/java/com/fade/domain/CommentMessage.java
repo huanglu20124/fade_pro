@@ -72,6 +72,24 @@ public class CommentMessage {
 	public void setComment_time(String comment_time) {
 		this.comment_time = comment_time;
 	}
+	public Integer getNote_id() {
+		return note_id;
+	}
+	public void setNote_id(Integer note_id) {
+		this.note_id = note_id;
+	}
+	public Integer getComment_id() {
+		return comment_id;
+	}
+	public void setComment_id(Integer comment_id) {
+		this.comment_id = comment_id;
+	}
+	public Integer getSecond_id() {
+		return second_id;
+	}
+	public void setSecond_id(Integer second_id) {
+		this.second_id = second_id;
+	}
 	
 	
 	

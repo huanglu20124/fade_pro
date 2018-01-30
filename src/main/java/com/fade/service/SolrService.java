@@ -1,18 +1,18 @@
 package com.fade.service;
 
-import java.util.List;
-
 import com.fade.domain.Note;
+import com.fade.domain.NoteQuery;
 import com.fade.domain.User;
+import com.fade.domain.UserQuery;
 
 public interface SolrService {
 
 	void solrAddUpdateUser(User user);
 
-	List<User> getTenUserKeyword(String keyword, Integer page);
+	 UserQuery getTenUserKeyword(String keyword, Integer page);
 
 	void solrAddUpdateNote(Note note);
 
-	List<Note> getTenNoteKeyWord(String keyword, Integer page, Integer isAlive);
+	NoteQuery getTenNoteKeyWord(String keyword, Integer page, Integer isAlive);
 	
 }

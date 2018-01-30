@@ -4,13 +4,14 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Param;
+import org.springframework.cache.annotation.Cacheable;
 
 import com.fade.domain.Image;
 import com.fade.domain.Note;
 
 public interface NoteDao {
 
-	//添加帖子
+	//添加帖子,第二个参数为初始流传时间
 	Integer addNote(Note note);
 	//批量插入图片
 	Integer addNoteImageBatch(Note note);
@@ -47,6 +48,10 @@ public interface NoteDao {
 	String getOneImage(Integer note_id);
 	//首页信息流，获取全部新增的帖子
 	List<Note> getAddNote(@Param("user_id")Integer user_id, @Param("start")Integer start);
+	//10条的获取活着的自己的动态，和首页一样，仅仅返回note_id和start
+	List<Note> getLiveNote(@Param("user_id")Integer user_id, @Param("start")int start);
+	//设置原贴的流传时间
+	void updateLiveTime(@Param("note_id")Integer note_id, @Param("liveTime")long liveTime);
 	
 	
 }

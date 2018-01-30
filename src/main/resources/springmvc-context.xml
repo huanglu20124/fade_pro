@@ -60,6 +60,9 @@
 	       <mvc:exclude-mapping path="/registerByName"/>
 	       <mvc:exclude-mapping path="/loginUserByTel/*/*"/>
 	       <mvc:exclude-mapping path="/loginUserByName/*/*"/>
+	       <mvc:exclude-mapping path="/searchUser/*/*"/>
+	       <mvc:exclude-mapping path="/offline/*"/>
+	       <mvc:exclude-mapping path="/getHeadImageUrl"/>
 	       <mvc:exclude-mapping path="/webSocketServer"/>
 	       <mvc:exclude-mapping path="/webSocketServer/sockjs"/>
 	       <bean class="com.fade.intercepter.AuthorizationInterceptor"></bean>

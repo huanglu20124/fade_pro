@@ -8,7 +8,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   <selectKey keyColumn="note_id" keyProperty="note_id" order="AFTER" resultType="Integer">
 	      SELECT LAST_INSERT_ID()
 	   </selectKey>
-	   insert into note values(null,#{user_id},#{note_content},#{post_time},0,0,0,1,#{target_id},#{type},#{note_area},#{uuid},0);
+	   insert into note values(null,#{user_id},#{note_content},#{post_time},0,0,0,1,#{target_id},#{type},
+	   #{note_area},#{uuid},0,#{liveTime});
 	</insert>
 	
 	<!-- 批量插入图片 -->
@@ -64,7 +65,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<select id="getNoteById" parameterType="Integer" resultType="Note">
 	    select b.user_id,b.note_id,b.note_content,b.post_time,b.comment_num,
 	           b.add_num, b.sub_num, b.is_die, b.target_id, b.type, 
-	           a.nickname, a.head_image_url,b.note_area,b.uuid,b.baseComment_num
+	           a.nickname, a.head_image_url,b.note_area,b.uuid,b.baseComment_num,b.liveTime
 	    from user a, note b
 	    where a.user_id=b.user_id and b.note_id=#{note_id}
 	</select>
@@ -77,7 +78,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	
 	<!-- 获取十条增减秒，每个note包含有user_id,nickname,type -->
 	<select id="getTenRelayNote" resultType="Note">
-	     select b.note_id, b.user_id,a.nickname,a.head_image_url,b.type
+	     select b.note_id, b.user_id,a.nickname,a.head_image_url,b.type,b.post_time
 	     from user a, note b
 	     where a.user_id=b.user_id and b.target_id=#{note_id}
 	     limit #{page},10
@@ -156,7 +157,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	    select image_url from note_image where note_id=#{note_id} LIMIT 1
 	</select>	
 	
-	<!-- 首页信息流，获取全部新增的帖子， 返回的Note仅仅包含note_id,target_id-->
+	<!-- 首页信息流，获取全部新增的活帖子， 返回的Note仅仅包含note_id,target_id-->
 	<select id="getAddNote" resultType="Note">
 	    <if test="start != 0">
 	    	    select distinct b.note_id, b.target_id
@@ -174,6 +175,33 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	                   and b.is_die=1 
 	                   order by note_id desc	                       
 	    </if>
+	    limit 0,10
 	</select>	
 	
+	<!-- 10条的获取活着的自己的动态 -->
+	<select id="getLiveNote" resultType="Note">
+	    <if test="start != 0">
+	    	    select a.note_id, a.target_id
+	    	    from note a
+	            where  a.user_id=#{user_id}
+	                   and a.is_die=1 
+	                   and a.note_id&lt;#{start}
+	                   order by note_id desc
+	    </if>
+	    
+	    <if test="start == 0">
+	    	    select a.note_id, a.target_id
+	    	    from note a
+	            where  a.user_id=#{user_id}
+	                   and a.is_die=1 
+	                   order by note_id desc	                           
+	    </if>
+	    limit 0,10	    
+	</select>
+	
+    <!-- 设置原贴的流传时间一 -->
+	<update id="updateLiveTime">
+	   update note set liveTime=#{liveTime}
+	   where note_id=#{note_id}
+	</update>
 </mapper>

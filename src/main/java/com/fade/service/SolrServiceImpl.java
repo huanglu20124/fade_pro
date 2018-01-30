@@ -15,11 +15,12 @@ import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.common.util.NamedList;
 import org.springframework.stereotype.Service;
 
 import com.fade.domain.Note;
+import com.fade.domain.NoteQuery;
 import com.fade.domain.User;
+import com.fade.domain.UserQuery;
 
 @Service("solrService")
 public class SolrServiceImpl implements SolrService {
@@ -61,14 +62,34 @@ public class SolrServiceImpl implements SolrService {
 	}
 
 	@Override
-	public List<User> getTenUserKeyword(String keyword, Integer page) {
+	public UserQuery getTenUserKeyword(String keyword, Integer page) {
+		UserQuery query = new UserQuery();
+		query.setStart(page + 1);
 		//调用solr数据库，分页查询
 		SolrQuery solrQuery = new SolrQuery();
 		solrQuery.setQuery("user_keyword:" + keyword);
+		//page=0的时候，先查询结果总数
+		if(page == 0){
+			try {
+				QueryResponse sumResponse = solrServer.query(solrQuery);
+				SolrDocumentList sumDocs = sumResponse.getResults();
+				query.setSum(new Long(sumDocs.getNumFound()).intValue());
+			} catch (SolrServerException e) {
+				System.out.println("连接搜索引擎出错");
+				e.printStackTrace();
+				return null;
+			}
+		}
 		//设置默认域
 		//solrQuery.set("df", "user_keyword");
 		solrQuery.setStart(page * 10);
 		solrQuery.setRows(10);
+		//设置高亮
+		solrQuery.setHighlight(true);
+		solrQuery.addHighlightField("nickname");
+		solrQuery.addHighlightField("fade_name");
+		solrQuery.setHighlightSimplePre("<font color=#29abe2>");
+		solrQuery.setHighlightSimplePost("</font>");
 		//得到结果
 		QueryResponse response;
 		try {
@@ -82,12 +103,21 @@ public class SolrServiceImpl implements SolrService {
 		SolrDocumentList docs = response.getResults();
 		System.out.println("记录条数为=" + docs.getNumFound());
 		List<User>users = new ArrayList<>();
+		Boolean isOne = false;
+		Map<String, Map<String, List<String>>> map = response.getHighlighting();  
 		for(SolrDocument document : docs){
 			User user = new User();
 			user.setUser_id((Integer) document.get("user_id"));
-			user.setNickname((String) document.get("nickname"));
+			String nickname = (String) document.get("nickname");
+			String fade_name = (String) document.get("fade_name");
+			if((nickname != null && nickname.equals(keyword)) || 
+					(fade_name != null && fade_name.equals(keyword))){
+					//完全匹配
+				isOne = true;
+			}
+			user.setNickname(nickname);
 			user.setArea((String) document.get("area"));
-			user.setFade_name((String) document.get("fade_name")); 
+			user.setFade_name(fade_name); 
 			user.setConcern_num((Integer) document.get("concern_num"));
 			user.setFade_num((Integer) document.get("fade_num"));
 			user.setFans_num((Integer) document.get("fans_num"));
@@ -99,9 +129,25 @@ public class SolrServiceImpl implements SolrService {
 			user.setSummary((String) document.get("summary"));
 			user.setUuid((String) document.get("id"));
 			user.setTelephone((String) document.get("telephone"));
+			Map<String, List<String>>docMap = map.get(document.get("id"));
+			List<String>hightlight_nickname = docMap.get("nickname");
+			List<String>hightlight_fade_name = docMap.get("fade_name");
+			if(hightlight_nickname != null && hightlight_nickname.size() > 0){
+				user.setNickname(hightlight_nickname.get(0));
+			}
+			if(hightlight_fade_name != null && hightlight_fade_name.size() > 0){
+				user.setFade_name(hightlight_fade_name.get(0));
+			}
+			if(isOne){
+				users.clear();
+				users.add(user);
+				query.setList(users);
+				return query;
+			}
 			users.add(user);
 		}
-		return users;
+		query.setList(users);
+		return query;
 	}
 
 	
@@ -128,13 +174,11 @@ public class SolrServiceImpl implements SolrService {
 
 	
 	@Override
-	public List<Note> getTenNoteKeyWord(String keyword, Integer page, Integer isAlive) {
+	public NoteQuery getTenNoteKeyWord(String keyword, Integer page, Integer isAlive) {
+		NoteQuery query = new NoteQuery();
+		query.setStart(page + 1); 
 		SolrQuery solrQuery = new SolrQuery();
 		solrQuery.setQuery("note_content:" + keyword);
-		//设置默认域
-		//solrQuery.set("df", "user_keyword");
-		solrQuery.setStart(page * 10);
-		solrQuery.setRows(10);
 		if(isAlive == 1){
 			//设置为活帖
 			solrQuery.setFilterQueries("is_die:1");
@@ -142,10 +186,26 @@ public class SolrServiceImpl implements SolrService {
 			//设置为死帖
 			solrQuery.setFilterQueries("is_die:0");
 		}
+		//page=0的时候，先查询结果总数
+		if(page == 0){
+			try {
+				QueryResponse sumResponse = solrServer.query(solrQuery);
+				SolrDocumentList docs = sumResponse.getResults();
+				query.setSum(new Long(docs.getNumFound()).intValue());
+			} catch (SolrServerException e) {
+				System.out.println("连接搜索引擎出错");
+				e.printStackTrace();
+				return null;
+			}
+		}
+		//设置默认域
+		//solrQuery.set("df", "user_keyword");
+		solrQuery.setStart(page * 10);
+		solrQuery.setRows(10);
 		//设置高亮
 		solrQuery.setHighlight(true);
 		solrQuery.addHighlightField("note_content");
-		solrQuery.setHighlightSimplePre("<font color=#FF8C00>");
+		solrQuery.setHighlightSimplePre("<font color=#29abe2>");
 		solrQuery.setHighlightSimplePost("</font>");
 		//得到结果
 		QueryResponse response;
@@ -174,8 +234,8 @@ public class SolrServiceImpl implements SolrService {
 			note.setIs_die((Integer)document.get("is_die"));
 			list.add(note);
 		}
-		
-		return list;
+		query.setList(list);
+		return query;
 	}
 
 
