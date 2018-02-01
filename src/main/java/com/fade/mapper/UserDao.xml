@@ -40,10 +40,16 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	
 	<!-- 获取关注的全部用户 -->
 	<select id="getStarUser" parameterType="int" resultType="User">
-	   select user_id, nickname from user a,relation b
+	   select a.user_id, a.nickname from user a,relation b
 	    where b.user_star = a.user_id and b.user_fans = #{user_id}
 	</select>
-	
+
+	<!-- 获取关注的全部用户的id -->
+	<select id="getStarUserId" parameterType="int" resultType="Integer">
+	   select a.user_id from user a,relation b
+	    where b.user_star = a.user_id and b.user_fans = #{user_id}
+	</select>
+		
 	<!-- 查询手机号是否已被注册 -->
 	<select id="getUserByTel" parameterType="String" resultType="User">
 	   select user_id from user where telephone=#{telephone}
@@ -403,5 +409,21 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 		and c.user_fans=#{user_id}
 		limit #{start},20
 	</select>
-		
+	
+	<!-- 仅获取一系列用户的id名字头像 -->
+	<select id="getMulSimpleUser" resultType="User">
+	    select nickname, user_id, head_image_url
+	      from user
+	      where user_id in 
+	      <foreach collection="resultList" item="item" open="(" close=")" separator=",">
+	          #{item}
+	      </foreach> 
+	</select>
+	
+	<!-- 得到最小用户,仅含名字，id，头像 -->
+		<select id="getMinUser" parameterType="Integer"  resultType="User">
+	    select nickname, user_id, head_image_url
+	      from user
+	     where user_id = #{user_id}
+	</select>
 </mapper>

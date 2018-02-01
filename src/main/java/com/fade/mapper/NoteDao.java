@@ -20,9 +20,9 @@ public interface NoteDao {
 	//一次查找一百条,活的帖子加入到队列里,返回的Note仅仅包含note_id,target_id
 	List<Note> getMuchNoteId(@Param("user_id")Integer user_id,@Param("search_id")Integer search_id);
 	//更新加一秒的数量
-	Integer updateNoteAddNum(@Param("user_id")Integer user_id, @Param("add_num")Integer add_num);
+	Integer updateNoteAddNum(@Param("note_id")Integer note_id, @Param("add_num")Integer add_num);
 	//更新减一秒的数量
-	Integer updateNoteSubNum(@Param("user_id")Integer user_id, @Param("sub_num")Integer sub_num);
+	Integer updateNoteSubNum(@Param("note_id")Integer note_id, @Param("sub_num")Integer sub_num);
 	//根据帖子id获取一个帖子全部内容，后期这个方法可能要缓存
 	Note getNoteById(Integer note_id);
 	//获取type，查询是否操作过一个帖子
@@ -52,6 +52,12 @@ public interface NoteDao {
 	List<Note> getLiveNote(@Param("user_id")Integer user_id, @Param("start")int start);
 	//设置原贴的流传时间
 	void updateLiveTime(@Param("note_id")Integer note_id, @Param("liveTime")long liveTime);
+	//更新单个帖子的生死情况
+	void updateNoteDieSingle(Integer note_id);
+	//找到全部增秒的人
+	List<Integer> getAddAll(Integer note_id);
+	//找到全部减秒的人
+	List<Integer> getSubAll(Integer note_id);
 	
 	
 }

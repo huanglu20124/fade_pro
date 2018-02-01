@@ -10,7 +10,7 @@ public interface NoteService {
 
 	String addNote(Note note, MultipartFile[] files)throws FadeException;
 
-	String getTenNoteByTime(Integer user_id, Integer start, Integer concern_num);
+	String getTenNoteByTime(Integer user_id, Integer start, Integer concern_num, List<Note>updateList);
 
 	String getMoreNote(Integer user_id, List<Note>updateList);
 

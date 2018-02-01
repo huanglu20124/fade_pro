@@ -40,7 +40,7 @@ public class Const {
 	//list2个人新帖子加载队列,list2_ + user_id
 	//list3帖子评论加载队列, list3_ + note_id
 	//list4详情页续秒增秒列表加载队列，其中为0的代表的是帖子本人点赞，需要再查询本人的信息,list4_ + note_id
-	
-	
+	//add_  增秒列表
+	//sub_  减秒列表，每次增秒或者减秒，缓存都重置为15l
 	
 }

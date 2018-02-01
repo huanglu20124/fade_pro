@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.channels.NotYetBoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -171,19 +172,17 @@ public class UserTest extends BaseTest {
 
 	@Test
 	public void getTenNoteByTime() throws Exception {
-		System.out.println(noteService.getTenNoteByTime(49,0,1));
+		//System.out.println(noteService.getTenNoteByTime(49,0,1));
 	}
 	
 	@Test
 	public void testChangeSecond() throws Exception {
-		for(int i = 0; i < 5; i++){
-			Note note = new Note();
-			note.setUser_id(29);
-			note.setNickname("Huanglu");
-			note.setTarget_id(445);
-			note.setType(1);
-			System.out.println(noteService.changeSecond(note,43));
-		}
+		Note note = new Note();
+		note.setUser_id(62);
+		note.setNickname("test");
+		note.setTarget_id(1486);
+		note.setType(1);
+		System.out.println(noteService.changeSecond(note,62));
 	}
 	
 	@Test
@@ -289,7 +288,22 @@ public class UserTest extends BaseTest {
     
     @Test
 	public void testAll() throws Exception {
-    	testWrite(noteService.getTenRelayNote(1418, 47, 0), true);
+/*    	 Set<Integer>set1 =  redisUtil.setGetAllInt("test");
+    	 Set<Integer>set2 = new HashSet<>();
+    	 set2.add(3);
+    	 set2.add(1);
+    	 set2.add(2);
+    	 set1.retainAll(set2);
+    	 List<Integer>list = new ArrayList<>();
+    	 list.addAll(set1);
+    	 System.out.println(list);*/
+    	List<Note>updateList =  new ArrayList<>();
+    	Note note = new Note();
+    	note.setNote_id(1490);
+    	note.setTarget_id(1486);
+    	note.setType(1);
+    	updateList.add(note);
+    	testWrite(noteService.getMoreNote(43, updateList), false);
 	}
       
 /*    @Test

@@ -32,13 +32,16 @@ public class NoteController {
 		return noteService.addNote(JSON.parseObject(note, Note.class),files); 
 	}
 
-	@RequestMapping(value = "/getTenNoteByTime/{user_id}/{start}/{concern_num}", method = RequestMethod.GET)
+	@RequestMapping(value = "/getTenNoteByTime/{user_id}/{start}/{concern_num}/{updateList}", method = RequestMethod.GET)
 	@ResponseBody
 	public String getTenNoteByTime(@PathVariable("user_id")Integer user_id,
-			@PathVariable("start")Integer start, @PathVariable("concern_num")Integer concern_num){
+			@PathVariable("start")Integer start, 
+			@PathVariable("concern_num")Integer concern_num,
+			@PathVariable("updateList")String updateList){
 		//初次加载以及向下翻，  按照时间顺序上拉加载10条，一开始start填0或者不发
 		//concern_num是sql语句判断用的
-		return noteService.getTenNoteByTime(user_id,start,concern_num);
+		//updateList用来判断是去除重复转发帖,必须包含note_Id,target_id,type
+		return noteService.getTenNoteByTime(user_id,start,concern_num,JSON.parseArray(updateList, Note.class));
 	}
 	
 	@RequestMapping(value = "/getMoreNote/{user_id}/{updateList}", method = RequestMethod.GET)

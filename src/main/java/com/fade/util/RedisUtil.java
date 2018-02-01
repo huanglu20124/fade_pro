@@ -152,6 +152,21 @@ public class RedisUtil{
 	public void setRemove(String key,Object value){
 		redisTemplate.opsForSet().remove(key,value);
 	}
+
+	public Long setSize(String key){
+		return redisTemplate.opsForSet().size(key);
+	}
+	
+	public Set<Integer> setGetAllInt(String key){
+		Set<Object>objects =  redisTemplate.opsForSet().members(key);
+		Set<Integer>set = new HashSet<>();
+		Iterator<Object>iterator = objects.iterator();
+		while (iterator.hasNext()) {
+			set.add((Integer)iterator.next());
+		}
+		return set;
+	}
+	
 	
 	public List<String> zsetRange(String key ,long start, long end){
 		Set<Object>set =  redisTemplate.opsForZSet().reverseRange(key, start, end);

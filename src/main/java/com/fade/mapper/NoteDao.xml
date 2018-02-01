@@ -32,7 +32,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<!-- 一次查找关注用户的一百条,活的帖子加入到队列里，比较用到转义字符  返回的Note仅仅包含note_id,target_id--> 
 	<select id="getMuchNoteId" resultType="Note">
 	    <if test="search_id != 0">
-	    	    select distinct b.note_id, b.target_id
+	    	    select distinct b.note_id, b.target_id, b.type
 	    	    from relation a, note b
 	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or (b.user_id=#{user_id} and b.target_id=0))
 	                   and b.is_die=1 
@@ -42,7 +42,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	    </if>
 	    
 	    <if test="search_id == 0">
-	    	    select distinct b.note_id,b.target_id 
+	    	    select distinct b.note_id,b.target_id, b.type
 	    	    from relation a, note b
 	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or (b.user_id=#{user_id} and b.target_id=0))
 	                   and b.is_die=1 
@@ -53,12 +53,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	
 	<!-- 更新加一秒的数量 -->
 	<update id="updateNoteAddNum">
-	    update note set add_num=#{add_num} where user_id=#{user_id}
+	    update note set add_num=#{add_num} where note_id=#{note_id}
 	</update>
 	
 	<!-- 更新减一秒的数量 -->
 	<update id="updateNoteSubNum">
-	    update note set sub_num=#{sub_num} where user_id=#{user_id}
+	    update note set sub_num=#{sub_num} where note_id=#{note_id}
 	</update>
 	
 	<!-- 根据帖子id获取一个帖子全部内容，后期这个方法可能要缓存 -->
@@ -107,7 +107,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<!-- 一次查找一百条,活的帖子加入到队列里,返回的Note仅仅包含note_id,target_id(仅限自己的)--> 
 	<select id="getMuchMyNoteId" resultType="Note">
 	    <if test="search_id != 0">
-	    	    select note_id, target_id
+	    	    select note_id, target_id, type
 	    	    from note 
 	            where  user_id=#{user_id}
 	                   and is_die=1 
@@ -117,7 +117,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	    </if>
 	    
 	    <if test="search_id == 0">
-	    	    select note_id, target_id
+	    	    select note_id, target_id, type
 	    	    from note 
 	            where  user_id=#{user_id}
 	                   and is_die=1 
@@ -160,19 +160,23 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<!-- 首页信息流，获取全部新增的活帖子， 返回的Note仅仅包含note_id,target_id-->
 	<select id="getAddNote" resultType="Note">
 	    <if test="start != 0">
-	    	    select distinct b.note_id, b.target_id
-	    	    from relation a, note b
+	    	    select distinct b.note_id, b.target_id,
+	    	    b.type, b.user_id, c.nickname, c.head_image_url
+	    	    from relation a, note b, user c
 	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or (b.user_id=#{user_id} and b.target_id=0))
 	                   and b.is_die=1 
 	                   and b.note_id>#{start}
+	                   and c.user_id=b.user_id
 	                   order by note_id desc
 	    </if>
 	    
 	    <if test="start == 0">
-	    	    select distinct b.note_id,b.target_id 
-	    	    from relation a, note b
+	    	    select distinct b.note_id,b.target_id,
+	    	    b.type, b.user_id, c.nickname, c.head_image_url
+	    	    from relation a, note b, user c
 	            where ((a.user_fans=#{user_id} and a.user_star=b.user_id) or (b.user_id=#{user_id} and b.target_id=0))
 	                   and b.is_die=1 
+	                   and c.user_id=b.user_id
 	                   order by note_id desc	                       
 	    </if>
 	    limit 0,10
@@ -204,4 +208,20 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   update note set liveTime=#{liveTime}
 	   where note_id=#{note_id}
 	</update>
+	
+	<!-- 更新单个帖子的生死情况 -->
+	<update id="updateNoteDieSingle">
+	   update note set is_die=0
+	   where note_id=#{note_id}
+	</update>	
+	
+	<!-- 找到全部增秒的人 -->
+	<select id="getAddAll"  parameterType="Integer" resultType="Integer">
+	    select user_id from note where target_id=#{note_id} and type=1
+	</select>
+	<!-- 找到全部减秒的人 -->
+	<select id="getSubAll"  parameterType="Integer" resultType="Integer">
+	    select user_id from note where target_id=#{note_id} and type=2
+	</select>	
+	
 </mapper>

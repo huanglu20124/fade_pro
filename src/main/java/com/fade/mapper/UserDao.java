@@ -102,6 +102,12 @@ public interface UserDao {
 	public List<User> getFans(@Param("user_id")Integer user_id, @Param("start")int start);
 	//个人页，分页查询20条关注者
 	public List<User> getConcerns(@Param("user_id")Integer user_id, @Param("start")int start);
+	//获得关注的人的id
+	public List<Integer> getStarUserId(Integer user_id);
+	//仅获取一系列用户的id名字头像
+	public List<User> getMulSimpleUser(@Param("resultList")List<Integer> resultList);
+	//得到最小用户,仅含名字，id，头像
+	public User getMinUser(Integer user_id);
 	
 	
 }

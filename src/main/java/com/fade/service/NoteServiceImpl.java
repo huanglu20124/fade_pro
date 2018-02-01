@@ -1,12 +1,13 @@
  package com.fade.service;
 
+import java.awt.RenderingHints.Key;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -16,19 +17,18 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 
-import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
 import org.apache.log4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.alibaba.fastjson.JSON;
-import com.fade.domain.Comment;
 import com.fade.domain.CommentQuery;
 import com.fade.domain.DetailPage;
 import com.fade.domain.Image;
 import com.fade.domain.Note;
 import com.fade.domain.NoteQuery;
 import com.fade.domain.SimpleResponse;
+import com.fade.domain.User;
 import com.fade.exception.FadeException;
 import com.fade.mapper.CommentDao;
 import com.fade.mapper.NoteDao;
@@ -163,7 +163,23 @@ public class NoteServiceImpl implements NoteService {
 	}
 
 	@Override
-	public String getTenNoteByTime(Integer user_id, Integer start, Integer concern_num) {
+	public String getTenNoteByTime(Integer user_id, Integer start, Integer concern_num, List<Note>updateList) {
+		//预处理，将已经显示有转发帖的原贴note_id放入checkSet中
+		Set<Integer>addCheckSet = new HashSet<>();
+		Set<Integer>subCheckSet = new HashSet<>();
+		if(updateList != null && updateList.size() > 0){
+			for(Note note : updateList){
+				if(note.getTarget_id() != null && note.getTarget_id() != 0){
+					//说明是转发帖，把原贴id放入
+					if(note.getType() == 1){
+						addCheckSet.add(note.getTarget_id());
+					}else if (note.getType() == 2) {
+						subCheckSet.add(note.getTarget_id());
+					}			
+				}
+			}
+		}
+		
 		Long time = System.currentTimeMillis();
 		String array_name = "list1_"+user_id;//队列名字		
 		//先直接查找前100 条，直到凑成10条 (仿票圈)，start=0的时候，定义为初次加载，先要清除redis缓存
@@ -185,7 +201,7 @@ public class NoteServiceImpl implements NoteService {
 			return JSON.toJSONString(query);//防止重复添加到redis队列
 		}
 		Boolean isNeed = false; //是否需要查询mysql数据库
-		List<String>die_ids = new ArrayList<>();//收集死亡的帖子，用于批处理更新数据库
+		List<Integer>die_ids = new ArrayList<>();//收集死亡的帖子，用于批处理更新数据库
 		String search_key = null;//用于数据库查询的起点，查找比这个key小的帖子
 		if(note_ids != null && note_ids.size() > 0) search_key = note_ids.get(note_ids.size() -1);
 		int flag = start;//一个flag，用来找到下次的start索引，最后作为start返回
@@ -194,25 +210,38 @@ public class NoteServiceImpl implements NoteService {
 			for(String key : note_ids){
 				String[]strs = key.split("_");
 				if(strs.length == 3){
-					//说明这是转发贴，还要判断原贴存不存在
+					//转发帖处理
 					String origin_key = "note_"+strs[2];
+					Integer origin_id = new Integer(strs[2]);
+					if(die_ids.contains(origin_id)){
+						//原创帖已死亡
+						die_ids.add(new Integer(strs[1]));
+						continue;
+					}
+					//转发贴，还要判断原贴存不存在
 					Note origin = (Note)redisUtil.getValue(origin_key);
 					if(origin == null){
 						//原贴不存在，则都销毁原贴以及这个贴
 						redisUtil.deleteKey(origin_key);
-						die_ids.add(strs[1]);
-						die_ids.add(strs[2]);
+						die_ids.add(origin_id);
+						die_ids.add(new Integer(strs[1]));
 						//从队列中移除
 						redisUtil.listRemoveValue(array_name, key);
 					}else {
 						//原贴存在的话，从数据库查询转发贴，并加上原贴，这里要考虑缓存
 						Note note = noteDao.getNoteById(new Integer(strs[1]));
-						origin.setFetchTime(time);
-						note.setOrigin(origin);
-						note.setFetchTime(time);
-						ans_list.add(note);
-						count++; 
-						flag++;
+						if((note.getType() == 1 && !addCheckSet.contains(origin_id))
+							|| (note.getType() == 2 && !subCheckSet.contains(origin_id))){
+							origin.setFetchTime(time);
+							note.setOrigin(origin);
+							note.setFetchTime(time);
+							ans_list.add(note);
+							count++; 
+							flag++;
+							//加入，以便后面校验
+							if(note.getType() == 1)addCheckSet.add(origin_id);
+							else subCheckSet.add(origin_id);
+						}
 					}
 				}else { 
 					//原创帖，直接从redis中获取
@@ -223,7 +252,7 @@ public class NoteServiceImpl implements NoteService {
 						count++;
 						flag++;
 					}else {
-						die_ids.add(strs[1]);
+						die_ids.add(new Integer(strs[1]));
 						//从队列中移除
 						redisUtil.listRemoveValue(array_name, key);
 					}
@@ -269,28 +298,40 @@ public class NoteServiceImpl implements NoteService {
 						//logger.info("增加帖子"+note.getNote_id()+"到队列中");
 					}else {
 						//清除
-						die_ids.add(note.getNote_id().toString());
+						die_ids.add(note.getNote_id());
 					}
 				}else {
-					//转发帖，还需要先判断原创帖在不在
-					Note origin = (Note)redisUtil.getValue("note_" + note.getTarget_id());
-					if(origin == null){
-						//该帖加入到死亡列表
-						die_ids.add(note.getNote_id().toString());
-					}else {
-						//获得该帖的信息，加入到队列
-						Note relay = noteDao.getNoteById(note.getNote_id());
-						origin.setFetchTime(time);
-						relay.setOrigin(origin);
-						relay.setFetchTime(time);
-						if(count < 10){
-							ans_list.add(relay); 
-							count++; 
-							flag++;
+					//转发帖
+					if(die_ids.contains(note.getTarget_id())){
+						//原贴已死亡
+						die_ids.add(note.getNote_id());
+						continue;
+					}
+					if((note.getType() == 1 && !addCheckSet.contains(note.getTarget_id()))
+							|| (note.getType() == 2 && !subCheckSet.contains(note.getTarget_id()))){
+						//转发帖，还需要先判断原创帖在不在
+						Note origin = (Note)redisUtil.getValue("note_" + note.getTarget_id());
+						if(origin == null){
+							//该帖加入到死亡列表
+							die_ids.add(note.getNote_id());
+						}else {
+							//获得该帖的信息，加入到队列
+							Note relay = noteDao.getNoteById(note.getNote_id());
+							origin.setFetchTime(time);
+							relay.setOrigin(origin);
+							relay.setFetchTime(time);
+							if(count < 10){
+								ans_list.add(relay); 
+								count++; 
+								flag++;
+								//加入，以便后面校验
+								if(note.getType() == 1)addCheckSet.add(note.getTarget_id());
+								else subCheckSet.add(note.getTarget_id());
+							}
+							//加入redis队列，key格式要区分开
+							redisUtil.listRightPush(array_name, "note_" + note.getNote_id() + "_" + note.getTarget_id());
+							//logger.info("增加帖子"+note.getNote_id()+"到队列中");
 						}
-						//加入redis队列，key格式要区分开
-						redisUtil.listRightPush(array_name, "note_" + note.getNote_id() + "_" + note.getTarget_id());
-						//logger.info("增加帖子"+note.getNote_id()+"到队列中");
 					}
 				}
 							
@@ -304,21 +345,110 @@ public class NoteServiceImpl implements NoteService {
 		}
 		//最后设置队列的缓存为5l
 		redisUtil.setKeyTime(array_name, 5l, TimeUnit.MINUTES);
-		//将死亡贴加入到set
-		if(die_ids.size() > 0) redisUtil.setAddKeyMul(Const.DIE_LIST, die_ids.toArray());
+		//清理死亡贴
+		//if(die_ids.size() > 0) redisUtil.setAddKeyMul(Const.DIE_LIST, die_ids.toArray());
+		if(die_ids.size() > 0){
+			noteDao.updateNoteDie(die_ids);
+			for(Integer die_id : die_ids){
+				logger.info("清理贴" + die_id);
+				//从热门榜中清除
+				redisUtil.zsetDeleteKey(Const.HOT_NOTES, "note_"+die_id);
+				//添加到索引数据库更新队列,更新is_die
+				redisUtil.listRightPush(Const.INDEX_LIST, die_id.toString());
+			}
+		}
 		if(count < 10){
 			//最后一次检查，如果数量小于10，热门推送进行补充
 			//List<Note>hot_notes = getHotNote(user_id,ans_list,null);
 			//if(hot_notes != null) ans_list.addAll(hot_notes);
 		}
-		//最后一个切面
+		//检查行为切面
 		checkAction(ans_list, user_id);
+		//给转发帖加上addUser以及subUser切面
+		addRelayData(ans_list,user_id);
 		System.out.println("帖子数量=" + ans_list.size());
-		Map<String, Object>map = new HashMap<>();
-		map.put("list", ans_list);
-		map.put("start", flag);
-		return JSON.toJSONString(map);
+		NoteQuery query = new NoteQuery();
+		query.setList(ans_list);
+		query.setStart(flag);
+		return JSON.toJSONString(query);
 	}
+
+	private void addRelayData(List<Note> list, Integer user_id) {
+		//先得到该用户关注的全部的人的id（后期加入缓存）
+		List<Integer>user_ids = userDao.getStarUserId(user_id);
+		List<Integer>resultList = null;
+		Set<Integer>result = null;
+		String key = null;
+		for(Note temp : list){
+			//针对转发帖：把自己关注的人的续秒或减秒记录合并进去，头10条
+			if(temp.getTarget_id() != null &&  temp.getTarget_id() != 0){
+				Integer origin_id = temp.getTarget_id();
+				if(temp.getType() == 1){
+					key = "add_" + origin_id;
+					//假如缓存为空，补上
+					if(redisUtil.setSize(key) == 0l){
+						List<Integer>addIds = noteDao.getAddAll(origin_id);
+						if(addIds.size() > 0){
+							result = new HashSet<>();
+							result.addAll(addIds);
+							redisUtil.setAddKeyMul(key, addIds.toArray());
+							redisUtil.setKeyTime(key, 30l, TimeUnit.MINUTES);
+						}
+					}else {
+						//增秒
+						result = redisUtil.setGetAllInt(key);
+					}
+
+				}else if (temp.getType() == 2) {
+					//减秒
+					key = "sub_" + origin_id;
+					if(redisUtil.setSize(key) == 0l){
+						List<Integer>subIds = noteDao.getSubAll(origin_id);
+						if(subIds.size() > 0){
+							result = new HashSet<>();
+							result.addAll(subIds);
+							redisUtil.setAddKeyMul(key, subIds.toArray());
+							redisUtil.setKeyTime(key, 30l, TimeUnit.MINUTES);
+						}
+					}else {
+						result = redisUtil.setGetAllInt(key);
+					}
+				}
+				result.retainAll(user_ids);
+				//再查找用户信息，这个方法后期要优化
+				resultList = new ArrayList<>();
+				resultList.addAll(result);
+				//因为时间顺序，反向一波
+				Collections.reverse(resultList);
+				//假如第一位不是该转发帖的作者话，调过去
+				if(resultList.size() > 0 && resultList.get(0) != temp.getUser_id()){
+					resultList.remove(temp.getUser_id());
+					resultList.add(0, temp.getUser_id());
+				}
+				//限制长度最多为10个
+				if(resultList.size() > 10){
+					resultList.subList(0, 10);
+				}
+				if(temp.getType() == 1){
+					temp.setAddUsers(getUsers(resultList));
+				}else {
+					temp.setSubUsers(getUsers(resultList));
+				}
+			}
+		}
+	}
+	
+
+	private List<User> getUsers(List<Integer> resultList) {
+		//由user_id得到用户的方法，后期要考虑缓存
+		//List<User>users = userDao.getMulSimpleUser(resultList);
+		List<User>users = new ArrayList<>();
+		for(Integer user_id : resultList){
+			users.add(userDao.getMinUser(user_id));
+		}
+		return users;
+	}
+	
 
 	@Override
 	public String getMoreNote(Integer user_id, List<Note>updateList) {
@@ -385,6 +515,9 @@ public class NoteServiceImpl implements NoteService {
 
 	private List<Note> getAddNote(Integer user_id, Integer lastId,List<Note>updateList) {
 		//顶部下拉刷新，获得新帖子
+		//这两个集合用于合并重复贴
+		Set<Integer>addCheckSet = new HashSet<>();
+		Set<Integer>subCheckSet = new HashSet<>();
 		//从list2队列中取出新增的
 		String array_name = "list2_" + user_id;
 		List<Note>notes = new ArrayList<>();
@@ -398,7 +531,7 @@ public class NoteServiceImpl implements NoteService {
 		updateNotes.addAll(updateList);
 		if(keys.size() == 0){
 			//list2队列为空，直接到数据库查询，仅查20条
-			List<Note>addIds = noteDao.getAddNote(user_id,lastId);//addIds仅仅包含有note_id和target_id
+			List<Note>addIds = noteDao.getAddNote(user_id,lastId);//addIds仅仅包含有note_id和target_id以及type,user_id
 			for(Note note : addIds){
 				if(!updateNotes.contains(note)){
 					if(note.getTarget_id() == 0){
@@ -413,15 +546,21 @@ public class NoteServiceImpl implements NoteService {
 						}
 					}else {
 						//转发帖
-						Note origin = (Note) redisUtil.getValue("note_" + note.getTarget_id());
-						if(origin == null){
-							die_ids.add(new Integer(note.getTarget_id())); 
-						}else {
-							origin.setFetchTime(time);
-							note.setOrigin(origin);
-							note.setFetchTime(time);
-							notes.add(note);
-							toListKey.add("note_" + note.getNote_id() + "_" + note.getTarget_id());
+						if((note.getType() == 1 && !addCheckSet.contains(note.getTarget_id()))
+								|| (note.getType() == 2 && !subCheckSet.contains(note.getTarget_id()))){
+							Note origin = (Note) redisUtil.getValue("note_" + note.getTarget_id());
+							if(origin == null){
+								die_ids.add(new Integer(note.getTarget_id())); 
+								die_ids.add(note.getTarget_id());
+							}else {
+								origin.setFetchTime(time); 
+								note.setOrigin(origin);
+								note.setFetchTime(time);
+								notes.add(note);
+								toListKey.add("note_" + note.getNote_id() + "_" + note.getTarget_id());
+								if(note.getType() == 1) addCheckSet.add(origin.getNote_id());
+								else subCheckSet.add(origin.getNote_id());
+							}
 						}
 					}
 				}
@@ -434,16 +573,22 @@ public class NoteServiceImpl implements NoteService {
 					Note origin = (Note)redisUtil.getValue("note_" + strs[2]);
 					if(origin == null){
 						die_ids.add(new Integer(strs[1])); 
+						die_ids.add(new Integer(strs[2]));
 					}else {
 						origin.setFetchTime(time);
 						Note note = noteDao.getNoteById(new Integer(strs[1]));
-						//查重
-						if(!updateNotes.contains(note)){
-							note.setOrigin(origin);
-							note.setFetchTime(time);
-							notes.add(note);
-							//toListKey.add("note_" + note.getNote_id() + "_" + note.getTarget_id());
-							count++;
+						if((note.getType() == 1 && !addCheckSet.contains(note.getTarget_id()))
+								|| (note.getType() == 2 && !subCheckSet.contains(note.getTarget_id()))){
+							//查重
+							if(!updateNotes.contains(note)){
+								note.setOrigin(origin);
+								note.setFetchTime(time);
+								notes.add(note);
+								//toListKey.add("note_" + note.getNote_id() + "_" + note.getTarget_id());
+								count++;
+								if(note.getType() == 1) addCheckSet.add(origin.getNote_id());
+								else subCheckSet.add(origin.getNote_id());
+							}
 						}
 					}
 				}else {
@@ -468,6 +613,8 @@ public class NoteServiceImpl implements NoteService {
 		//将增加的key加到list1(已取消)
 /*		if(toListKey.size() > 0)
 		redisUtil.listLeftPushAll("list1_" + user_id, toListKey.toArray());*/
+		//因为可能出现原创帖，来一波加数据
+		addRelayData(notes, user_id);
 		return notes;
 	}
 
@@ -477,6 +624,8 @@ public class NoteServiceImpl implements NoteService {
 		if(note == null || note.getTarget_id() == null || note.getTarget_id() == 0) throw new FadeException("请求格式不正确！");
 		Note origin = (Note)redisUtil.getValue("note_" + note.getTarget_id());
 		if(origin == null) throw new FadeException("操作失败，原贴已失效！");
+		//启动缓存
+		changeSecondCache(origin.getNote_id(), user_id, note.getType());
 		//自己续自己的情况
 		if(origin.getUser_id() == note.getUser_id()){
 			return changeSecondWithoutAdd(note);
@@ -514,7 +663,11 @@ public class NoteServiceImpl implements NoteService {
 		if(past >= 5l){
 			if(time_left <= 0){
 				//直接删除原贴
-				redisUtil.setAddKey(Const.DIE_LIST, origin.getNote_id().toString());
+				//redisUtil.setAddKey(Const.DIE_LIST, origin.getNote_id().toString());
+				noteDao.updateNoteDieSingle(origin.getNote_id());;
+				logger.info("清理贴" + origin.getNote_id());
+				//添加到索引数据库更新队列,更新is_die
+				redisUtil.listRightPush(Const.INDEX_LIST, origin.getNote_id().toString());
 				//从排行榜中移除
 				redisUtil.zsetDeleteKey(Const.HOT_NOTES, "note_" + origin.getNote_id());
 				redisUtil.deleteKey("note_" + origin.getNote_id());
@@ -531,6 +684,9 @@ public class NoteServiceImpl implements NoteService {
 		noteDao.updateLiveTime(origin.getNote_id(), past + time_left);
 		//存储到数据库
 		noteDao.addNote(note);	
+		//如果续减秒数量小于11，则需要刷新list4系列缓存
+		if(add_sum + sub_sum <= 11)
+		redisUtil.deleteKey("list4_" + note.getTarget_id());
 		//websocket通知原主人
 		webSocketHandler.sendMessageToUser(origin.getUser_id(), JSON.toJSONString(new SimpleResponse("00", null)));
 		//转发帖只存入数据库，不添加到redis中
@@ -596,7 +752,7 @@ public class NoteServiceImpl implements NoteService {
 	
 	private void checkIsDie(List<Note>updateList){
 		Long time = System.currentTimeMillis();
-		List<String>die_ids = new ArrayList<>();//收集死亡的帖子，用于批处理更新数据库
+		List<Integer>die_ids = new ArrayList<>();//收集死亡的帖子，用于批处理更新数据库
 		//更新已加载过的数据，若不存在的话，is_die设置为0
 		//有死的贴则更新到die_list
 		Note note = null;
@@ -619,7 +775,7 @@ public class NoteServiceImpl implements NoteService {
 					}else {
 						//转发帖已死亡
 						temp.setIs_die(0);
-						die_ids.add(temp.getNote_id().toString());
+						die_ids.add(temp.getNote_id());
 					}
 			 }else {
 				 origin = (Note)redisUtil.getValue("note_" + temp.getNote_id());
@@ -633,12 +789,22 @@ public class NoteServiceImpl implements NoteService {
 				 }else {
 					 //原贴已死亡
 					temp.setIs_die(0);
-					die_ids.add(temp.getNote_id().toString());				
+					die_ids.add(temp.getNote_id());				
 				}
 			}
 		}
 		//将死亡贴加入到set
-		if(die_ids.size() > 0) redisUtil.setAddKeyMul(Const.DIE_LIST, die_ids.toArray());
+		//if(die_ids.size() > 0) redisUtil.setAddKeyMul(Const.DIE_LIST, die_ids.toArray());
+		if(die_ids.size() > 0){
+			noteDao.updateNoteDie(die_ids);
+			for(Integer die_id : die_ids){
+				logger.info("清理贴" + die_id);
+				//从热门榜中清除
+				redisUtil.zsetDeleteKey(Const.HOT_NOTES, "note_"+die_id);
+				//添加到索引数据库更新队列,更新is_die
+				redisUtil.listRightPush(Const.INDEX_LIST, die_id.toString());
+			}
+		}
 	}
 	
 	public void addImages(List<Note>notes) {
@@ -660,7 +826,13 @@ public class NoteServiceImpl implements NoteService {
 		//实际上note_id应该就为原贴的id
 		Note note = (Note) redisUtil.getValue("note_" + note_id);
 		if(note == null) {
-			redisUtil.setAddKey(Const.DIE_LIST, note_id.toString());
+			//帖子已消失，需要更新数据库
+			noteDao.updateNoteDieSingle(note_id);
+			logger.info("清理贴" + note_id);
+			//从热门榜中清除
+			redisUtil.zsetDeleteKey(Const.HOT_NOTES, "note_"+note_id);
+			//添加到索引数据库更新队列,更新is_die
+			redisUtil.listRightPush(Const.INDEX_LIST,note_id.toString());
 			//throw new FadeException("该帖子已消失");
 		}
 		if(note == null){
@@ -810,13 +982,27 @@ public class NoteServiceImpl implements NoteService {
 
 	@Override
 	public String getMyNote(Integer user_id, Integer start) {
+		//得到自己的原创fade
 		NoteQuery query = new NoteQuery();
 		List<Note>notes = noteDao.getMyNote(user_id,start);
 		long time = System.currentTimeMillis();
 		//图片数据
 		for(Note note : notes){
-			List<Image>images = noteDao.getNoteImage(note.getNote_id());
-			note.setImages(images);
+			if(note.getIs_die() == 1){
+				//活帖的话，直接从redis取
+				Note cahcheNote = (Note) redisUtil.getValue("note_" + note.getNote_id());
+				if(cahcheNote == null){
+					//帖子已死亡，按照死贴处理
+					note.setIs_die(0);
+					List<Image>images = noteDao.getNoteImage(note.getNote_id());
+					note.setImages(images);
+				}else {
+					note = cahcheNote;
+				}
+			}else {
+				List<Image>images = noteDao.getNoteImage(note.getNote_id());
+				note.setImages(images);
+			}
 			//设置fetchTime
 			note.setFetchTime(time);
 		}
@@ -857,17 +1043,30 @@ public class NoteServiceImpl implements NoteService {
 	       return result;  
 	}
 
-	
 	@Override
 	public String getOtherPersonNote(Integer user_id, Integer my_id, Integer start) {
+		//获得他人的原创fade
 		NoteQuery query = new NoteQuery();
 		List<Note>notes = noteDao.getMyNote(user_id,start);
 		//设置fetchTime
 		long time = System.currentTimeMillis();
 		//图片数据
 		for(Note note : notes){
-			List<Image>images = noteDao.getNoteImage(note.getNote_id());
-			note.setImages(images);
+			if(note.getIs_die() == 1){
+				//活帖的话，直接从redis取
+				Note cahcheNote = (Note) redisUtil.getValue("note_" + note.getNote_id());
+				if(cahcheNote == null){
+					//帖子已死亡，按照死贴处理
+					note.setIs_die(0);
+					List<Image>images = noteDao.getNoteImage(note.getNote_id());
+					note.setImages(images);
+				}else {
+					note = cahcheNote;
+				}
+			}else {
+				List<Image>images = noteDao.getNoteImage(note.getNote_id());
+				note.setImages(images);
+			}
 			note.setFetchTime(time);
 		}
 		checkAction(notes, my_id);
@@ -880,7 +1079,6 @@ public class NoteServiceImpl implements NoteService {
 		return JSON.toJSONString(query);
 	}
 
-	
 	@Override
 	public void addImage(List<Note> list) {
 		//添加图片
@@ -892,6 +1090,8 @@ public class NoteServiceImpl implements NoteService {
 	@Override
 	public String getFullNote(Integer note_id, Integer user_id) {
 		Note note = noteDao.getNoteById(note_id);
+		Note originNote = null;
+		long time = System.currentTimeMillis();
 		if(note != null){
 			Integer type = null;
 			if(note.getTarget_id() != null && note.getTarget_id() != 0){
@@ -901,13 +1101,22 @@ public class NoteServiceImpl implements NoteService {
 				Note origin = noteDao.getNoteById(note.getTarget_id());
 				origin.setImages(noteDao.getNoteImage(origin.getNote_id()));
 				note.setOrigin(origin);
+				originNote = origin;
 			}else {
 				type = noteDao.getNoteCheckAction(user_id,note.getNote_id());
 				note.setImages(noteDao.getNoteImage(note_id));
+				originNote = note;
 			}
+			note.setFetchTime(time);
 			if(type == null){
-				//还没操作过
-				note.setAction(0);
+				//假如是自己的帖子
+				if(originNote != null && originNote.getUser_id() == user_id){
+					note.setAction(userDao.getIsMySecond(user_id,originNote.getNote_id()));
+				}else {
+					//还没操作过
+					note.setAction(0);
+				}
+				if(note.getAction() == null) note.setAction(0);
 			}else if (type == 1) {
 				//增
 				note.setAction(1);
@@ -918,7 +1127,6 @@ public class NoteServiceImpl implements NoteService {
 		}
 		return JSON.toJSONString(note);
 	}
-
 	
 	@Override
 	public String searchNote(String keyword, Integer page, Integer isAlive,Integer user_id) {
@@ -928,11 +1136,31 @@ public class NoteServiceImpl implements NoteService {
 		long time = System.currentTimeMillis();
 		//补全帖子属性
 		for(Note simpleNote : query.getList()){
-			Note note = noteDao.getNoteById(simpleNote.getNote_id());
-			note.setNote_content(simpleNote.getNote_content());//因为从索引数据库里可能得到带高亮的内容
-			//设置fetchTime
-			note.setFetchTime(time);
-			fullList.add(note);
+			if(simpleNote.getIs_die() == 1){
+				//活帖，直接从redis中取数据
+				Note note = (Note) redisUtil.getValue("note_" + simpleNote.getNote_id());
+				if(note != null){
+					note.setNote_content(simpleNote.getNote_content());//因为从索引数据库里可能得到带高亮的内容
+					//设置fetchTime
+					note.setFetchTime(time);
+					fullList.add(note);
+				}
+			}else {
+				//从数据库中查询
+				Note note = noteDao.getNoteById(simpleNote.getNote_id());
+				note.setNote_content(simpleNote.getNote_content());//因为从索引数据库里可能得到带高亮的内容
+				//设置fetchTime
+				note.setFetchTime(time);
+				fullList.add(note);
+			}
+
+		}
+		if(fullList.size() == 0){
+			//出现这种情况，可能是因为输入者输入非关键词的，需要到mysql数据库模糊查询一些记录，补充一下
+			//分页查询，得到前50条，再得到分页
+		    //List<Note>temps = noteDao.searchLimitNote(keyword,50,isAlive);
+		    
+		    //query.setSum(temps.size());
 		}
 		addImage(fullList);
 		checkAction(fullList, user_id);
@@ -940,7 +1168,6 @@ public class NoteServiceImpl implements NoteService {
 		return JSON.toJSONString(query);
 	}
 
-	
 	@Override
 	public String changeSecondWithoutAdd(Note note) throws FadeException{
 		//自己对自己点赞
@@ -976,7 +1203,11 @@ public class NoteServiceImpl implements NoteService {
 		if(past >= 5l){
 			if(time_left <= 0){
 				//直接删除原贴
-				redisUtil.setAddKey(Const.DIE_LIST, origin.getNote_id().toString());
+				//redisUtil.setAddKey(Const.DIE_LIST, origin.getNote_id().toString());
+				noteDao.updateNoteDieSingle(origin.getNote_id());;
+				logger.info("清理贴" + origin.getNote_id());
+				//添加到索引数据库更新队列,更新is_die
+				redisUtil.listRightPush(Const.INDEX_LIST, origin.getNote_id().toString());
 				//从排行榜中移除
 				redisUtil.zsetDeleteKey(Const.HOT_NOTES, "note_" + origin.getNote_id());
 				redisUtil.deleteKey("note_" + origin.getNote_id());
@@ -987,6 +1218,9 @@ public class NoteServiceImpl implements NoteService {
 		}
 		redisUtil.addKey("note_"+origin.getNote_id(), origin,time_left, TimeUnit.MINUTES);
 		logger.info("续一秒成功，原贴" + origin.getNote_id() + "的剩余时间为" + time_left + "分钟");
+		//如果续减秒数量小于11，则需要刷新list4系列缓存
+		if(add_sum + sub_sum <= 11)
+		redisUtil.deleteKey("list4_" + note.getTarget_id());
 		Map<String, Object>extra = new HashMap<>();
 		//设置原贴的流传时间（直接写入数据库）
 		noteDao.updateLiveTime(origin.getNote_id(), past + time_left);
@@ -1002,12 +1236,11 @@ public class NoteServiceImpl implements NoteService {
 		logger.info("用户" + note.getUser_id() + "对自己续秒成功");
 		return JSON.toJSONString(response);
 	}
-
 	
 	@Override
 	public NoteQuery getLiveNote(Integer user_id, Integer my_id, Integer start) {
 		NoteQuery query = new NoteQuery();
-		List<String>die_ids = new ArrayList<>();
+		List<Integer>die_ids = new ArrayList<>();
 		long time = System.currentTimeMillis();
 		//获取自己活着他人的动态帖子
 		List<Note>list = new ArrayList<>();
@@ -1019,7 +1252,7 @@ public class NoteServiceImpl implements NoteService {
 				Note origin = (Note)redisUtil.getValue("note_" + temp.getTarget_id());
 				if(origin == null){
 					//该帖加入到死亡列表
-					die_ids.add(temp.getNote_id().toString());
+					die_ids.add(temp.getNote_id());
 				}else {
 					//获得该帖的信息，加入到队列
 					Note relay = noteDao.getNoteById(temp.getNote_id());
@@ -1036,7 +1269,7 @@ public class NoteServiceImpl implements NoteService {
 					list.add(note);
 				}else {
 					//清除
-					die_ids.add(temp.getNote_id().toString());
+					die_ids.add(temp.getNote_id());
 				}
 			}
 		}
@@ -1048,7 +1281,49 @@ public class NoteServiceImpl implements NoteService {
 			query.setStart(notes.get(size -1).getNote_id());
 		}
 		//将死亡贴加入到set
-		if(die_ids.size() > 0) redisUtil.setAddKeyMul(Const.DIE_LIST, die_ids.toArray());
+		if(die_ids.size() > 0){
+			//redisUtil.setAddKeyMul(Const.DIE_LIST, die_ids.toArray());
+			noteDao.updateNoteDie(die_ids);
+			for(Integer die_id : die_ids){
+				logger.info("清理贴" + die_id);
+				//从热门榜中清除
+				redisUtil.zsetDeleteKey(Const.HOT_NOTES, "note_"+die_id);
+				//添加到索引数据库更新队列,更新is_die
+				redisUtil.listRightPush(Const.INDEX_LIST, die_id.toString());
+			}
+		}
 		return query;
-	}  
+	}
+	
+	private void changeSecondCache(Integer note_id,Integer user_id, Integer type){
+		//note_id为原贴id，将续秒减秒记录加入缓存，时间为半小时
+		if(type == 1){
+			String key = "add_" + note_id;
+			//增
+			if(redisUtil.setSize(key) == 0l){
+				//队列为空，读数据库，加载到redis，半小时
+				//返回全部续秒的人的id
+				List<Integer>addIds = noteDao.getAddAll(note_id);
+				if(addIds.size() > 0){
+					redisUtil.setAddKeyMul(key, addIds.toArray());
+				}
+			}
+			redisUtil.setAddKey(key, user_id);
+			redisUtil.setKeyTime(key, 30l, TimeUnit.MINUTES);
+		}
+		else if (type == 2) {
+			String key = "sub_" + note_id;
+			//减
+			if(redisUtil.setSize(key) == 0l){
+				//队列为空，读数据库，加载到redis，半小时
+				//返回全部续秒的人的id
+				List<Integer>subIds = noteDao.getSubAll(note_id);
+				if(subIds.size() > 0){
+					redisUtil.setAddKeyMul(key, subIds.toArray());
+				}
+			}
+			redisUtil.setAddKey(key, user_id);
+			redisUtil.setKeyTime(key, 30l, TimeUnit.MINUTES);
+		}
+	}
 }
