@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 import com.fade.domain.Note;
 import com.fade.domain.NoteQuery;
+import com.fade.domain.UpdateMessage;
 import com.fade.exception.FadeException;
 
 public interface NoteService {
@@ -37,5 +38,11 @@ public interface NoteService {
 	String changeSecondWithoutAdd(Note secondNote) throws FadeException;
 
 	NoteQuery getLiveNote(Integer user_id, Integer my_id, Integer start);
+
+	String getConcernSecondNote(Integer user_id, Integer target_id,Integer start, Integer type);
+
+	String getAllSecond(Integer user_id, Integer target_id, Integer start, Integer type);
+
+	void updateReference(UpdateMessage message);
 	
 }

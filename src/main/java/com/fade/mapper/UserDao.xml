@@ -7,11 +7,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 		select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
 		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
 		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
-		 b.school_name
-		from user a, school b
+		 b.school_name, a.department_id, c.department_name, a.dynamicNum
+		from user a, school b, department c
 		<where>
 		a.user_id=#{user_id}
 		and a.school_id=b.school_id
+		and a.department_id=c.department_id
 		</where>
 	</select>
 	
@@ -25,7 +26,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	                           #{wechat_id},#{weibo_id},#{qq_id},0,
 	                           0,0,#{area}, #{uuid},
 	                           #{salt},#{school_id},
-	                           null,null)
+	                           null,null,#{department_id},0)
 	</insert>
 	
 	<!-- 编辑用户昵称 -->
@@ -40,10 +41,20 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	
 	<!-- 获取关注的全部用户 -->
 	<select id="getStarUser" parameterType="int" resultType="User">
-	   select a.user_id, a.nickname from user a,relation b
-	    where b.user_star = a.user_id and b.user_fans = #{user_id}
+	   select a.user_id, a.nickname, a.school_id, a.department_id,
+	   a.fans_num, a.fade_num, a.concern_num
+	    from user a,relation b
+	   where b.user_star = a.user_id and b.user_fans = #{user_id}
 	</select>
-
+	
+	<!-- 找到全部粉丝 -->
+	<select id="getFansUser" parameterType="int" resultType="User">
+	   select a.user_id, a.nickname, a.school_id, a.department_id,
+	   a.fans_num, a.fade_num, a.concern_num
+	    from user a,relation b
+	   where b.user_star = #{user_id} and b.user_fans = a.user_id
+	</select>
+	
 	<!-- 获取关注的全部用户的id -->
 	<select id="getStarUserId" parameterType="int" resultType="Integer">
 	   select a.user_id from user a,relation b
@@ -60,10 +71,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 		 select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
 		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
 		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
-		 b.school_name
-		from user a, school b
+		 b.school_name, a.department_id, c.department_name, a.dynamicNum
+		from user a, school b, department c
 	    where 
 	    a.telephone=#{telephone} and a.password=#{password}
+	    and b.school_id=a.school_id
+	    and a.department_id=c.department_id
 	</select>
 	
 	<!-- 通过fade账号和密码登录 -->
@@ -71,10 +84,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 		 select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
 		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
 		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
-		 b.school_name
-		from user a, school b 
+		 b.school_name, a.department_id, c.department_name, a.dynamicNum
+		from user a, school b, department c
 	    where 
 	    fade_name=#{fade_name} and password=#{password}
+	    and b.school_id=a.school_id
+	    and a.department_id=c.department_id
 	</select>
 	
 
@@ -83,10 +98,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 		select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
 		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
 		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
-		 b.school_name
-		from user a, school b
+		 b.school_name,a.department_id, c.department_name, a.dynamicNum
+		from user a, school b, department c
 	    <where>
 	      a.school_id=b.school_id
+	      and a.department_id=c.department_id
 	      and
 	      <if test="type == 0">
 	          a.wechat_id=#{open_id}
@@ -105,10 +121,11 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 		select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
 		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
 		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, a.uuid,
-		 b.school_name
-		from user a, school b
+		 b.school_name, a.department_id, c.department_name, a.dynamicNum
+		from user a, school b, department c
 	    where
 	    a.school_id=b.school_id
+	    and a.department_id=c.department_id
 	    and fade_name=#{fade_name}
 	</select>
 	
@@ -151,11 +168,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<select id="getSimpleUserById" parameterType="Integer" resultType="User">
 		select a.user_id, a.telephone, a.fade_name, a.nickname, a.password,
 		 a.sex,a.head_image_url,a.register_time, a.summary, a.concern_num, a.fans_num,
-		  a.fade_num, a.area, a.school_id, a.uuid, b.school_name
-		from user a, school b
+		  a.fade_num, a.area, a.school_id, a.uuid, b.school_name, 
+		  a.department_id, c.department_name, a.dynamicNum
+		from user a, school b, department c
 	    where
 	    a.school_id=b.school_id
 	    and a.user_id=#{user_id}
+	    and a.department_id=c.department_id
 	</select>
 	
 	<!--获取是否关注某人-->
@@ -324,13 +343,27 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	</update>
 	
 	<!-- 关注数量+1 -->
-	<update id="updateConcernNumPlus" parameterType="Integer">
-	   update user set concern_num=concern_num+1 where user_id=#{fans_id}
+	<update id="updateConcernNum" >
+	   update user set concern_num=
+	   <if test="type==1">
+	   	   concern_num+1 
+	   </if>
+	   <if test="type==2">
+	   	   concern_num-1 
+	   </if>
+	   where user_id=#{fans_id}
 	</update>
 	
 	<!-- 粉丝数量加一 -->
-	<update id="updateFansNumPlus" parameterType="Integer">
-	   update user set fans_num=fans_num+1 where user_id=#{star_id}
+	<update id="updateFansNum">
+	   update user set fans_num=
+	   <if test="type==1">
+	    fans_num+1 
+	   </if>
+	   <if test="type==2">
+	    fans_num-1 
+	   </if>  
+	   where user_id=#{star_id}
 	</update>
 	
 	<!--通知相关： 原主人的通知数量+1 -->
@@ -421,9 +454,40 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	</select>
 	
 	<!-- 得到最小用户,仅含名字，id，头像 -->
-		<select id="getMinUser" parameterType="Integer"  resultType="User">
+	<select id="getMinUser" parameterType="Integer"  resultType="User">
 	    select nickname, user_id, head_image_url
 	      from user
 	     where user_id = #{user_id}
+	</select>
+	
+	<!-- 得到全部用户的id -->
+	<select id="getAllUsersId" resultType="Integer">
+	   select user_id from user
+	</select>
+	
+	<!-- 更新推荐用户信息 -->
+	<update id="updateRecommendUsers">
+	   update user set recommendUser=#{recommendUser} where user_id=#{user_id}
+	</update>
+	
+	<!-- 随机找到num个大于阈值hotUserThreshold的用户，同时还要是未关注的 -->
+	<select id="getHotUserRandom" resultType="Integer">
+	   SELECT * FROM user where 
+	   fans_num >= #{hotUserThreshold} 
+	   and user_id not in
+	      <foreach collection="starIds" item="item" open="(" close=")" separator=",">
+	          #{item}
+	      </foreach> 	   
+	   order by  RAND() limit #{num} ;
+	</select>
+	
+	<!-- 更新推荐帖子 -->
+	<update id="updateRecommendNote">
+	   update user set recommendNote=#{recommendNote} where user_id=#{user_id}
+	</update>
+	
+	<!-- 得到推荐帖子 -->
+	<select id="getRecommendNote" parameterType="Integer" resultType="String">
+	  select recommendNote from user where user_id=#{user_id}
 	</select>
 </mapper>

@@ -1,13 +1,10 @@
 package com.fade.mapper;
 
-import java.util.Collection;
 import java.util.List;
-
 import org.apache.ibatis.annotations.Param;
-import org.springframework.cache.annotation.Cacheable;
-
 import com.fade.domain.Image;
 import com.fade.domain.Note;
+import com.fade.domain.Preference;
 
 public interface NoteDao {
 
@@ -55,9 +52,20 @@ public interface NoteDao {
 	//更新单个帖子的生死情况
 	void updateNoteDieSingle(Integer note_id);
 	//找到全部增秒的人
-	List<Integer> getAddAll(Integer note_id);
+	List<Note> getAddAll(Integer note_id);
 	//找到全部减秒的人
-	List<Integer> getSubAll(Integer note_id);
+	List<Note> getSubAll(Integer note_id);
+	//得到某个续秒贴
+	Note getRelayNoteById(Integer note_id);
+	//将某个原贴的全部抓发帖is_die置为0
+	void updateRelayNoteDie(Integer target_id);
+	//得到某条偏好
+	Preference getPreference(@Param("note_id")Integer note_id, @Param("user_id")Integer user_id);
+	//加入某条偏好
+	void addPreference(Preference preference);
+	//更新偏好分数
+	void updatePreference(@Param("note_id")Integer note_id, @Param("user_id")Integer user_id,
+			@Param("score")Double score);
 	
 	
 }

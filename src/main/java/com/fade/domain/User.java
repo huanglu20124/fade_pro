@@ -2,6 +2,7 @@ package com.fade.domain;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 用户类
@@ -71,6 +72,39 @@ public class User implements Serializable{
 	//是否已经关注了这个人
 	private Integer isConcern;
 	
+	//动态数量
+	private Integer dynamicNum;
+	//院系id
+	private Integer department_id;
+	//院系名字
+	private String department_name;
+	//推荐分数,找到感兴趣用户的时候用到的
+	private Double recommendScore;
+	
+	public Double getRecommendScore() {
+		return recommendScore;
+	}
+	public void setRecommendScore(Double recommendScore) {
+		this.recommendScore = recommendScore;
+	}
+	public Integer getDepartment_id() {
+		return department_id;
+	}
+	public void setDepartment_id(Integer department_id) {
+		this.department_id = department_id;
+	}
+	public String getDepartment_name() {
+		return department_name;
+	}
+	public void setDepartment_name(String department_name) {
+		this.department_name = department_name;
+	}
+	public Integer getDynamicNum() {
+		return dynamicNum;
+	}
+	public void setDynamicNum(Integer dynamicNum) {
+		this.dynamicNum = dynamicNum;
+	}
 	public Integer getFade_num() {
 		return fade_num;
 	}
@@ -239,5 +273,16 @@ public class User implements Serializable{
 		this.isConcern = isConcern;
 	}
 
+	@Override
+	public boolean equals(Object obj) {
+		if(obj == this) return true; 
+		if(!(obj instanceof Note)) return false;	
+		User user = (User) obj;
+		return user_id.equals(user.getUser_id());
+	}
 	
+	@Override
+	public int hashCode() {
+		return Objects.hash(user_id.intValue());
+	}
 }

@@ -229,11 +229,11 @@ public class UserController {
 		return userService.getFans(user_id, start);
 	}	
 	
-	
 	@RequestMapping(value = "/getConcerns/{user_id}/{start}",method =  RequestMethod.GET)
 	@ResponseBody
 	public String getConcerns(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
 		//个人页，分页查询20条关注者
 		return userService.getConcerns(user_id, start);
 	}		
+
 }

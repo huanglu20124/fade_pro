@@ -215,13 +215,42 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	   where note_id=#{note_id}
 	</update>	
 	
-	<!-- 找到全部增秒的人 -->
-	<select id="getAddAll"  parameterType="Integer" resultType="Integer">
-	    select user_id from note where target_id=#{note_id} and type=1
+	<!-- 找到全部增秒的贴 -->
+	<select id="getAddAll"  parameterType="Integer" resultType="Note">
+	    select user_id, note_id from note where target_id=#{note_id} and type=1
 	</select>
-	<!-- 找到全部减秒的人 -->
-	<select id="getSubAll"  parameterType="Integer" resultType="Integer">
-	    select user_id from note where target_id=#{note_id} and type=2
+	<!-- 找到全部减秒的贴 -->
+	<select id="getSubAll"  parameterType="Integer" resultType="Note">
+	    select user_id, note_id from note where target_id=#{note_id} and type=2
 	</select>	
 	
+	<!-- 得到某个续秒贴 -->
+	<select id="getRelayNoteById" parameterType="Integer" resultType="Note">
+	  select a.user_id, a.nickname, a.head_image_url, b.note_id, b.post_time
+	  from user a, note b
+	  where b.note_id=#{note_id}
+	  and b.user_id=a.user_id
+	</select>
+	
+	<!-- 将某个原贴的全部抓发帖is_die置为0 -->
+	<update id="updateRelayNoteDie" parameterType="Integer">
+	  update note set is_die=0 where target_id=#{target_id}
+	</update>
+	
+	<!-- 得到某条偏好 -->
+	<select id="getPreference"  resultType="Preference">
+	   select user_id, note_id, score from preference where
+	   user_id=#{user_id} and note_id=#{note_id}
+	</select>	
+	
+	<!-- 加入某条偏好 -->
+	<insert id="addPreference" parameterType="Preference">
+	   insert into preference values(#{user_id}, #{note_id}, #{score}, null);
+	</insert>
+	
+	<!-- 更新分数 -->
+	<update id="updatePreference" >
+	  update preference set score=score + #{score} where
+	  	 user_id=#{user_id} and note_id=#{note_id}
+	</update>	
 </mapper>

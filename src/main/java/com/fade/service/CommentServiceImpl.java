@@ -19,10 +19,12 @@ import com.fade.domain.CommentQuery;
 import com.fade.domain.Note;
 import com.fade.domain.SecondComment;
 import com.fade.domain.SimpleResponse;
+import com.fade.domain.UpdateMessage;
 import com.fade.exception.FadeException;
 import com.fade.mapper.CommentDao;
 import com.fade.mapper.NoteDao;
 import com.fade.mapper.UserDao;
+import com.fade.util.Const;
 import com.fade.util.RedisUtil;
 import com.fade.util.TimeUtil;
 import com.fade.websocket.MessageWebSocketHandler;
@@ -231,6 +233,8 @@ public class CommentServiceImpl implements CommentService{
 		}else {
 			response.setErr("添加失败");
 		}
+		//更新到用户偏好
+		createUpdateMessage(2, comment.getNote_id(), comment.getUser_id(), null);
 		return JSON.toJSONString(response);
 	}
 	
@@ -298,7 +302,13 @@ public class CommentServiceImpl implements CommentService{
 		}else {
 			response.setErr("添加失败");
 		}
+		//更新到用户偏好
+		createUpdateMessage(2, secondComment.getNote_id(), secondComment.getUser_id(), null);
 		return JSON.toJSONString(response);
 	}
 
+	private void createUpdateMessage(Integer msgId, Integer note_id, Integer user_id,Integer owener_id){
+		UpdateMessage updateMessage = new UpdateMessage(msgId, note_id, user_id, owener_id);
+		redisUtil.listRightPush(Const.PREFERENCE_LIST, updateMessage);
+	}
 }

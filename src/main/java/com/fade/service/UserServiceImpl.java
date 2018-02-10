@@ -147,7 +147,11 @@ public class UserServiceImpl implements UserService {
 		user.setWechat_id(wechat_id);
 		//学校id，没有的话设置为默认的中大
 		if(user.getSchool_id() == null){
-			user.setSchool_id(1);
+			user.setSchool_id(Const.DEFAULT_SCHOOL_ID);
+		}
+		//院系id，没有就设置默认
+		if(user.getDepartment_id() == null){
+			user.setDepartment_id(Const.DEFAULT_DEPARTMENT_ID);
 		}
 		String url = null;
 		if((url = user.getHead_image_url()) != null){
@@ -247,7 +251,11 @@ public class UserServiceImpl implements UserService {
 		user.setUuid(uuid);
 		//学校id，没有的话设置为默认的中大
 		if(user.getSchool_id() == null){
-			user.setSchool_id(1);
+			user.setSchool_id(Const.DEFAULT_SCHOOL_ID);
+		}
+		//院系id，没有就设置默认
+		if(user.getDepartment_id() == null){
+			user.setDepartment_id(Const.DEFAULT_DEPARTMENT_ID);
 		}
 		// 设置盐，MD5加密，散列一次
 		String salt = UUID.randomUUID().toString().substring(0, 5);
@@ -456,9 +464,9 @@ public class UserServiceImpl implements UserService {
 		if(userDao.addConcern(fans_id,star_id) != null){
 			response.setSuccess("关注成功！");
 			//关注数量+1
-			userDao.updateConcernNumPlus(fans_id);
+			userDao.updateConcernNum(fans_id,1);
 			//粉丝数量加一
-			userDao.updateFansNumPlus(star_id);
+			userDao.updateFansNum(star_id,1);
 			//未读通知粉丝数量+1
 			userDao.updateAddFansPlus(star_id);
 			//通知前端更新
@@ -472,7 +480,12 @@ public class UserServiceImpl implements UserService {
 	@Override
 	public String cancelConcern(Integer fans_id, Integer star_id) {
 		SimpleResponse response = new SimpleResponse();
-		userDao.cancelConcern(fans_id,star_id);
+		if(userDao.cancelConcern(fans_id,star_id) != null){
+			//关注数量-1
+			userDao.updateConcernNum(fans_id,2);
+			//粉丝数量-1
+			userDao.updateFansNum(star_id,2);
+		}
 		response.setSuccess("取消关注成功！");
 		return JSON.toJSONString(response);
 	}
@@ -778,7 +791,6 @@ public class UserServiceImpl implements UserService {
 		}
 	}
 
-	
 	@Override
 	public String getFans(Integer user_id, Integer start) {
 		//个人页，分页查询20条粉丝
@@ -794,10 +806,9 @@ public class UserServiceImpl implements UserService {
 		}
 		query.setList(list);
 		query.setStart(++start);
-		return JSON.toJSONString(list);
+		return JSON.toJSONString(query);
 	}
 	
-
 	@Override
 	public String getConcerns(Integer user_id, Integer start) {
 		//个人页，分页查询20条关注者
@@ -805,6 +816,8 @@ public class UserServiceImpl implements UserService {
 		List<User>list = userDao.getConcerns(user_id,start*20);
 		query.setList(list);
 		query.setStart(++start);
-		return JSON.toJSONString(list);
+		return JSON.toJSONString(query);
 	}
+
+	
 }

@@ -1,6 +1,7 @@
 package com.hl.test;
 
 
+
 import static org.junit.Assert.*;
 
 import java.io.BufferedReader;
@@ -8,7 +9,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.channels.NotYetBoundException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -19,19 +23,8 @@ import java.util.UUID;
 
 import javax.annotation.Resource;
 
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.ognl.InappropriateExpressionException;
-import org.apache.mahout.cf.taste.impl.common.LongPrimitiveIterator;
-import org.apache.mahout.cf.taste.impl.model.MySQLJDBCIDMigrator;
-import org.apache.mahout.cf.taste.impl.model.file.FileDataModel;
-import org.apache.mahout.cf.taste.impl.neighborhood.NearestNUserNeighborhood;
-import org.apache.mahout.cf.taste.impl.recommender.GenericUserBasedRecommender;
-import org.apache.mahout.cf.taste.impl.similarity.PearsonCorrelationSimilarity;
-import org.apache.mahout.cf.taste.model.DataModel;
-import org.apache.mahout.cf.taste.model.JDBCDataModel;
-import org.apache.mahout.cf.taste.neighborhood.UserNeighborhood;
-import org.apache.mahout.cf.taste.recommender.RecommendedItem;
-import org.apache.mahout.cf.taste.recommender.Recommender;
-import org.apache.mahout.cf.taste.similarity.UserSimilarity;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +34,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import com.alibaba.druid.util.JdbcUtils;
 import com.alibaba.fastjson.JSON;
 import com.fade.controller.UserController;
 import com.fade.domain.Comment;
@@ -56,10 +50,11 @@ import com.fade.service.CommentService;
 import com.fade.service.NoteService;
 import com.fade.service.SolrService;
 import com.fade.service.UserService;
+import com.fade.util.Const;
+import com.fade.util.JDBCUtil;
 import com.fade.util.RedisUtil;
 import com.fade.util.TimeUtil;
 import com.fade.util.TokenUtil;
-import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
 
 public class UserTest extends BaseTest {
 /*	@Resource(name="userService")
@@ -162,9 +157,9 @@ public class UserTest extends BaseTest {
 		Note note = new Note();
 		note.setUser_id(43);
 		note.setNickname("黄路");
-		note.setNote_content("内容测试3" + "。有句话说的好，爱的多深就恨得多深，如今当年的科黑和詹黑估计年龄都有25-45岁之间，大多数都已经成熟懂事了，很多人黑着黑着就黑出了感情，其实科比退役的时候已经基本没有科黑了，因为他退役的时候才幡然醒悟，原来一直是爱他的；");
+		note.setNote_content("2月2日" + "。有句话说的好，爱的多深就恨得多深，如今当年的科黑和詹黑估计年龄都有25-45岁之间，大多数都已经成熟懂事了，很多人黑着黑着就黑出了感情，其实科比退役的时候已经基本没有科黑了，因为他退役的时候才幡然醒悟，原来一直是爱他的；");
 		note.setPost_time(TimeUtil.getCurrentTime());
-		note.setHead_image_url("image/head/2018-01/83a21c6d-d.png");
+		note.setHead_image_url("image/head/2018-01/e5ad1284-5.png");
 		note.setUuid(UUID.randomUUID().toString());
 		noteService.addNote(note, null);	
 		solrService.solrAddUpdateNote(note);
@@ -178,11 +173,11 @@ public class UserTest extends BaseTest {
 	@Test
 	public void testChangeSecond() throws Exception {
 		Note note = new Note();
-		note.setUser_id(62);
+		note.setUser_id(53);
 		note.setNickname("test");
-		note.setTarget_id(1486);
-		note.setType(1);
-		System.out.println(noteService.changeSecond(note,62));
+		note.setTarget_id(1585);
+		note.setType(2);
+		System.out.println(noteService.changeSecond(note,53));
 	}
 	
 	@Test
@@ -245,9 +240,9 @@ public class UserTest extends BaseTest {
 	@Test
 	public void testLogin() throws Exception {
 		User user = new User();
-		user.setPassword("123");
-		user.setTelephone("18902356675");
-		System.out.println(userService.loginUser(user));
+		user.setPassword("66e6056677d54c72b04a5aafb252f44a");
+		user.setTelephone("13763359943");
+		System.out.println(userDao.getUserByTelPwd(user));
 	}
 	
 	@Test
@@ -287,23 +282,62 @@ public class UserTest extends BaseTest {
 	}
     
     @Test
+	public void insertSchool() throws Exception {
+		Connection connection1 =   JDBCUtil.getConn("jdbc:mysql://119.23.229.19:3306/school?useUnicode=true&amp;characterEncoding=utf8",
+				"student", "137137lu");
+		Connection connection2 =   JDBCUtil.getConn("jdbc:mysql://119.23.229.19:3306/fade_pro?useUnicode=true&amp;characterEncoding=utf8",
+				"student", "137137lu");	
+		String sql1 = "select * from school";
+		String sql2 = "insert into school values(?,?,?)";
+		Statement statement1 = connection1.createStatement();
+		ResultSet resultSet1 =   statement1.executeQuery(sql1);
+		PreparedStatement statement2 = connection2.prepareStatement(sql2);
+		while(resultSet1.next()){
+			String name = resultSet1.getString("name");
+			Integer cid = resultSet1.getInt("cid");
+			Integer sid = resultSet1.getInt("sid");
+			statement2.setInt(1, sid);
+			statement2.setString(2, name);
+			statement2.setInt(3, cid);
+			statement2.execute();
+			//System.out.println("插入成功：" + name);
+		}
+		connection1.close();
+		connection2.close();
+	}
+    
+    @Test
+	public void insertDepartment() throws Exception {
+		Connection connection1 =   JDBCUtil.getConn("jdbc:mysql://119.23.229.19:3306/school?useUnicode=true&amp;characterEncoding=utf8",
+				"student", "137137lu");
+		Connection connection2 =   JDBCUtil.getConn("jdbc:mysql://119.23.229.19:3306/fade_pro?useUnicode=true&amp;characterEncoding=utf8",
+				"student", "137137lu");	
+		String sql1 = "select * from department";
+		String sql2 = "insert into department values(null,?,?)";
+		Statement statement1 = connection1.createStatement();
+		ResultSet resultSet1 =   statement1.executeQuery(sql1);
+		PreparedStatement statement2 = connection2.prepareStatement(sql2);
+		while(resultSet1.next()){
+			String name = resultSet1.getString("name");
+			Integer sid = resultSet1.getInt("sid");
+			statement2.setInt(1, sid);
+			statement2.setString(2, name);
+			statement2.execute();
+			//System.out.println("插入成功：" + name);
+		}
+		connection1.close();
+		connection2.close();
+	}
+    
+    @Test
 	public void testAll() throws Exception {
-/*    	 Set<Integer>set1 =  redisUtil.setGetAllInt("test");
-    	 Set<Integer>set2 = new HashSet<>();
-    	 set2.add(3);
-    	 set2.add(1);
-    	 set2.add(2);
-    	 set1.retainAll(set2);
-    	 List<Integer>list = new ArrayList<>();
-    	 list.addAll(set1);
-    	 System.out.println(list);*/
     	List<Note>updateList =  new ArrayList<>();
-    	Note note = new Note();
+/*    	Note note = new Note();
     	note.setNote_id(1490);
     	note.setTarget_id(1486);
     	note.setType(1);
-    	updateList.add(note);
-    	testWrite(noteService.getMoreNote(43, updateList), false);
+    	updateList.add(note);*/
+    	testWrite(userService.getFans(43, 0),false);
 	}
       
 /*    @Test
@@ -343,11 +377,11 @@ public class UserTest extends BaseTest {
     
     @Test
 	public void testAddPreference() throws Exception {
-		int[] user_ids = new int []{43,45,46,47,48,49,51,52,53,54};
+		int[] user_ids = new int []{43,45,46,47,48,51,52,53,54,56,57,58,62,63};
 		for(int user_id : user_ids){
-			int[]note_ids = randomArray(400, 515, 50);
+			int[]note_ids = randomArray(1395, 1574, 30);
 			for(int note_id : note_ids){
-				double a = new Random().nextInt(10) + 0.5;
+				double a = new Random().nextInt(3) + 0.5;
 				userDao.addPreference(user_id,note_id,a);
 			}
 		}

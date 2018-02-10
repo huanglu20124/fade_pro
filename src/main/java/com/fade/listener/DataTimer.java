@@ -5,18 +5,20 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Timer;
 
-import javax.servlet.ServletContext;
-
 import org.apache.log4j.Logger;
 
+import com.fade.service.NoteService;
+import com.fade.util.RedisUtil;
+
 public class DataTimer {
-	private ServletContext servletContext;
-	private Logger logger;
+	private RedisUtil redisUtil;
+	private NoteService noteService;
 	private Timer timer;
+	private Logger logger = Logger.getLogger(DataTimer.class);
 	
-	public DataTimer(ServletContext servletContext, Logger logger) {
-		this.logger = logger;
-		this.servletContext = servletContext;
+	public DataTimer(NoteService noteService, RedisUtil redisUtil) {
+		this.redisUtil = redisUtil;
+		this.noteService = noteService;
 	}
 	
 	public void startTimer(){
@@ -25,8 +27,8 @@ public class DataTimer {
 		//系统启动10秒后开始执行任务
 		gc.setTime(new Date());
 		gc.add(Calendar.SECOND, 10);
-		//每15分钟执行一次
-		timer.schedule(new DataTask(servletContext,logger), gc.getTime(),900000);
+		//每1分钟执行一次
+		timer.schedule(new DataTask(noteService, redisUtil), gc.getTime(),60000);
 		logger.info("数据集更新器启动");
 	}
 	

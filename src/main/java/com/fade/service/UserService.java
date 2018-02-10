@@ -62,4 +62,5 @@ public interface UserService {
 
 	String getConcerns(Integer user_id, Integer start);
 
+
 }

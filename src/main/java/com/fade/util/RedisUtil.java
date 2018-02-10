@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.remoting.RemoteTimeoutException;
 
 public class RedisUtil{
 
@@ -69,7 +70,7 @@ public class RedisUtil{
 		return keys;
 	}
 	
-	public void listLeftPush(String array_name,String value){
+	public void listLeftPush(String array_name,Object value){
 		//插入到队列左边
 		redisTemplate.opsForList().leftPush(array_name, value);
 	}
@@ -84,15 +85,15 @@ public class RedisUtil{
 		redisTemplate.opsForList().rightPushAll(array_name, values);
 	}	
 	
-	public void listLeftPop(String array_name){
-		redisTemplate.opsForList().leftPop(array_name);
+	public Object listLeftPop(String array_name){
+		return redisTemplate.opsForList().leftPop(array_name);
 	}
 	
-	public void listRightPop(String array_name){
-		redisTemplate.opsForList().rightPop(array_name);
+	public Object listRightPop(String array_name){
+		return redisTemplate.opsForList().rightPop(array_name);
 	}	
 	
-	public void listRightPush(String array_name,String value){
+	public void listRightPush(String array_name,Object value){
 		//插入到队列左边
 		redisTemplate.opsForList().rightPush(array_name, value);
 	}	
@@ -153,11 +154,11 @@ public class RedisUtil{
 		redisTemplate.opsForSet().remove(key,value);
 	}
 
-	public Long setSize(String key){
+/*	public Long setSize(String key){
 		return redisTemplate.opsForSet().size(key);
-	}
+	}*/
 	
-	public Set<Integer> setGetAllInt(String key){
+/*	public Set<Integer> setGetAllInt(String key){
 		Set<Object>objects =  redisTemplate.opsForSet().members(key);
 		Set<Integer>set = new HashSet<>();
 		Iterator<Object>iterator = objects.iterator();
@@ -165,7 +166,7 @@ public class RedisUtil{
 			set.add((Integer)iterator.next());
 		}
 		return set;
-	}
+	}*/
 	
 	
 	public List<String> zsetRange(String key ,long start, long end){
@@ -179,6 +180,39 @@ public class RedisUtil{
 		return list;
 	}
 	
+	public List<Integer> zsetRangeInt(String key ,long start, long end){
+		//分数从低到高
+		Set<Object>set =  redisTemplate.opsForZSet().range(key, start, end);
+		List<Integer>list = new ArrayList<>();
+		Iterator<Object>iterator = set.iterator();
+		while (iterator.hasNext()) {
+			list.add((Integer)iterator.next());
+		}
+		return list;
+	}
 	
+	public Boolean zsetisMember(String key,Object member){
+		Object ans = redisTemplate.opsForZSet().rank(key, member);
+		return ans == null ? false : true;
+	}	
+	
+	public List<Integer> zsetGetAllIntList(String key){
+		//按照倒序排序加入
+		Set<Object>set =  redisTemplate.opsForZSet().reverseRange(key, 0, -1);
+		List<Integer>list = new ArrayList<>();
+		Iterator<Object>iterator = set.iterator();
+		while (iterator.hasNext()) {
+			list.add((Integer) iterator.next());
+		}
+		return list;
+	}	
+	
+	public long zsetGetSize(String key){
+	    return redisTemplate.opsForZSet().size(key);
+	}
+	
+	public Double zsetScore(String key, Object object){
+		return redisTemplate.opsForZSet().score(key, object);
+	}
 
 }

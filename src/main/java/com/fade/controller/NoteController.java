@@ -32,21 +32,18 @@ public class NoteController {
 		return noteService.addNote(JSON.parseObject(note, Note.class),files); 
 	}
 
-	@RequestMapping(value = "/getTenNoteByTime/{user_id}/{start}/{concern_num}/{updateList}", method = RequestMethod.GET)
+	@RequestMapping(value = "/getTenNoteByTime", method = RequestMethod.POST)
 	@ResponseBody
-	public String getTenNoteByTime(@PathVariable("user_id")Integer user_id,
-			@PathVariable("start")Integer start, 
-			@PathVariable("concern_num")Integer concern_num,
-			@PathVariable("updateList")String updateList){
+	public String getTenNoteByTime(Integer user_id,Integer start, Integer concern_num,String updateList){
 		//初次加载以及向下翻，  按照时间顺序上拉加载10条，一开始start填0或者不发
 		//concern_num是sql语句判断用的
 		//updateList用来判断是去除重复转发帖,必须包含note_Id,target_id,type
 		return noteService.getTenNoteByTime(user_id,start,concern_num,JSON.parseArray(updateList, Note.class));
 	}
 	
-	@RequestMapping(value = "/getMoreNote/{user_id}/{updateList}", method = RequestMethod.GET)
+	@RequestMapping(value = "/getMoreNote", method = RequestMethod.POST)
 	@ResponseBody
-	public String getMoreNote(@PathVariable("user_id")Integer user_id, @PathVariable("updateList")String updateList){
+	public String getMoreNote(Integer user_id,String updateList){
 		System.out.println("user_id=" + user_id + " updateList=" + updateList);
 		//顶部下拉刷新，同时更新之前发过的帖子的信息,updateList的一项要包含note_id,target_id
 		return noteService.getMoreNote(user_id,JSON.parseArray(updateList, Note.class));
@@ -123,5 +120,27 @@ public class NoteController {
 		return noteService.searchNote(keyword,start,isAlive,user_id);
 	}
 	
+	@RequestMapping(value = "/getConcernSecond/{user_id}/{target_id}/{start}/{type}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getConcernSecond(@PathVariable("user_id")Integer user_id,@PathVariable("target_id")Integer target_id,
+			@PathVariable("start")Integer start,@PathVariable("type")Integer type){
+		//点开折叠列表，获取20条记录, type为1和2，分别代表增和减
+		return noteService.getConcernSecondNote(user_id, target_id, start, type);
+	}
+
+	@RequestMapping(value = "/getAllSecond/{user_id}/{target_id}/{start}/{type}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getAllSecond(@PathVariable("user_id")Integer user_id,@PathVariable("target_id")Integer target_id,
+			@PathVariable("start")Integer start,@PathVariable("type")Integer type){
+		//点开折叠列表，获取20条记录, type为1和2，分别代表增和减
+		return noteService.getAllSecond(user_id, target_id, start, type);
+	}
 	
+	
+	@RequestMapping(value = "/getTenRelayNote/{note_id}/{user_id}/{start}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getTenRelayNote(@PathVariable("note_id")Integer note_id, @PathVariable("user_id")Integer user_id, 
+			@PathVariable("start")Integer start){
+		return JSON.toJSONString(noteService.getTenRelayNote(note_id, user_id, start));
+	}
 }

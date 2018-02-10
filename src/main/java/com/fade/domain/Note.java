@@ -39,13 +39,22 @@ public class Note implements Serializable {
 	
 	private Long liveTime;//存活时间，死贴专有属性
 	
-	//转发帖具有的属性
+	//转发帖具有的属性，目前仅限十个
 	private List<User>addUsers;//续秒用户
 	
 	private List<User>subUsers;//减秒用户
 	
+	//与上面两个属性有关，关注的人中续秒或减秒的总数量
+	private Integer relayUserNum;
 	
-	
+	public Integer getRelayUserNum() {
+		return relayUserNum;
+	}
+
+	public void setRelayUserNum(Integer relayUserNum) {
+		this.relayUserNum = relayUserNum;
+	}
+
 	public List<User> getAddUsers() {
 		return addUsers;
 	}

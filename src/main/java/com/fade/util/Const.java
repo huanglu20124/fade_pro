@@ -23,6 +23,15 @@ public class Const {
 	//收集需要添加到索引数据库的帖子
 	public static final String INDEX_LIST   = "index_list";
 	
+	//需要更新数据的任务
+	public static final String PREFERENCE_LIST = "preference_list";
+	
+	//默认院系及默认学校
+	public static final int DEFAULT_SCHOOL_ID = 1;
+	public static final int DEFAULT_DEPARTMENT_ID = 100000;
+	//热门用户的阈值
+	public static final int HOT_USER_THRESHOLD = 0;
+	
 	//融云的app秘钥
 	public static final String RONG_APP_KEY ="0vnjpoad0gn2z";
 	public static final String RONG_APP_SECRET ="Sk52dbUr6eg";
@@ -40,7 +49,7 @@ public class Const {
 	//list2个人新帖子加载队列,list2_ + user_id
 	//list3帖子评论加载队列, list3_ + note_id
 	//list4详情页续秒增秒列表加载队列，其中为0的代表的是帖子本人点赞，需要再查询本人的信息,list4_ + note_id
-	//add_  增秒列表
-	//sub_  减秒列表，每次增秒或者减秒，缓存都重置为15l
+	//add_  增秒列表  zset member为user， value为note_id
+	//sub_  减秒列表，每次增秒或者减秒，缓存都重置为15l zset member为user， value为note_id
 	
 }

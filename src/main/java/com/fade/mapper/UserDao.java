@@ -1,5 +1,6 @@
 package com.fade.mapper;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Param;
@@ -41,7 +42,7 @@ public interface UserDao {
 	//关注某人
 	public Integer addConcern(@Param("fans_id")Integer fans_id, @Param("star_id")Integer star_id);
 	//取消关注某人
-	public void cancelConcern(@Param("fans_id")Integer fans_id, @Param("star_id")Integer star_id);
+	public Integer cancelConcern(@Param("fans_id")Integer fans_id, @Param("star_id")Integer star_id);
 	//用于详情页，得到部分用户信息
 	public User getSimpleUserById(Integer user_id);
 	//用于详情页，查询是否已关注某人
@@ -56,10 +57,10 @@ public interface UserDao {
 	public List<User> getAddFans(@Param("user_id")Integer user_id, @Param("start")Integer start, @Param("point")String point);
 	//fade数量加一
 	public Integer updateFadeNumPlus(Integer user_id);
-	//关注数量+1
-	public Integer updateConcernNumPlus(Integer fans_id);
+	//关注数量+1, type为1是增，为2是减
+	public Integer updateConcernNum(@Param("fans_id")Integer fans_id, @Param("type")Integer type);
 	//粉丝数量加一
-	public Integer updateFansNumPlus(Integer star_id);
+	public Integer updateFansNum(@Param("star_id")Integer star_id, @Param("type")Integer type);
 	//未读贡献数量+1
 	public Integer updateContributePlus(Integer user_id);
 	//未读通知粉丝数量+1
@@ -108,6 +109,21 @@ public interface UserDao {
 	public List<User> getMulSimpleUser(@Param("resultList")List<Integer> resultList);
 	//得到最小用户,仅含名字，id，头像
 	public User getMinUser(Integer user_id);
+	//得到全部用户的id
+	public List<Integer> getAllUsersId();
+	//更新推荐用户信息
+	public void updateRecommendUsers(@Param("user_id")Integer user_id, 
+			@Param("recommendUser")String recommendUser);
+	//随机找到num个大于阈值hotUserThreshold的用户
+	public List<Integer> getHotUserRandom(@Param("num")int num, 
+			@Param("hotUserThreshold")int hotUserThreshold, @Param("starIds")List<Integer>starIds);
+	//找到全部粉丝
+	public List<User> getFansUser(Integer user_id);
+	//更新推荐帖子
+	public void updateRecommendNote(@Param("user_id")Integer user_id,
+			@Param("recommendNote")String recommendNote);
+	//得到推荐帖子
+	public String getRecommendNote(Integer user_id);
 	
 	
 }
