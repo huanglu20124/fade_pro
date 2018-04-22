@@ -125,7 +125,7 @@ public class UserController {
 		return userService.concern(fans_id,star_id);
 	}
 
-	@RequestMapping(value = "/cancelConcern/{fans_id}/{star_id}",method =  RequestMethod.DELETE)
+	@RequestMapping(value = "/cancelConcern/{fans_id}/{star_id}",method =  RequestMethod.POST)
 	@ResponseBody
 	public String cancelConcern(@PathVariable("fans_id")Integer fans_id, @PathVariable("star_id")Integer star_id){
 		return userService.cancelConcern(fans_id,star_id);

@@ -107,8 +107,10 @@ public class UserTest extends BaseTest {
 		user.setRegister_time(com.fade.util.TimeUtil.getCurrentTime());
 		user.setSchool_id(1);
 		user.setSalt("xxxx");
-		userDao.addUser(user);
-		System.out.println(user.getUser_id());//自增主键自动设置到对象中
+		user.setPassword("xxxxxxxxxx");
+		userService.registerByName(user, null);
+		//userDao.addUser(user);
+		//System.out.println(user.getUser_id());//自增主键自动设置到对象中
 	}
 
 	@Test
@@ -154,15 +156,17 @@ public class UserTest extends BaseTest {
 		
 	@Test
 	public void testAddNote() throws Exception {
-		Note note = new Note();
-		note.setUser_id(43);
-		note.setNickname("黄路");
-		note.setNote_content("2月2日" + "。有句话说的好，爱的多深就恨得多深，如今当年的科黑和詹黑估计年龄都有25-45岁之间，大多数都已经成熟懂事了，很多人黑着黑着就黑出了感情，其实科比退役的时候已经基本没有科黑了，因为他退役的时候才幡然醒悟，原来一直是爱他的；");
-		note.setPost_time(TimeUtil.getCurrentTime());
-		note.setHead_image_url("image/head/2018-01/e5ad1284-5.png");
-		note.setUuid(UUID.randomUUID().toString());
-		noteService.addNote(note, null);	
-		solrService.solrAddUpdateNote(note);
+		for(int i = 0; i < 10; i++){
+			Note note = new Note();
+			note.setUser_id(43);
+			note.setNickname("黄路");
+			note.setNote_content("2月27日" + "。有句话说的好，爱的多深就恨得多深，如今当年的科黑和詹黑估计年龄都有25-45岁之间，大多数都已经成熟懂事了，很多人黑着黑着就黑出了感情，其实科比退役的时候已经基本没有科黑了，因为他退役的时候才幡然醒悟，原来一直是爱他的；");
+			note.setPost_time(TimeUtil.getCurrentTime());
+			note.setHead_image_url("image/head/2018-02/55e5bbce-e.png");
+			note.setUuid(UUID.randomUUID().toString());
+			noteService.addNote(note, null);	
+		}
+
 	}
 
 	@Test
@@ -337,7 +341,7 @@ public class UserTest extends BaseTest {
     	note.setTarget_id(1486);
     	note.setType(1);
     	updateList.add(note);*/
-    	testWrite(userService.getFans(43, 0),false);
+    	testWrite(userService.getTenRecommendUser(81, 1),false);
 	}
       
 /*    @Test

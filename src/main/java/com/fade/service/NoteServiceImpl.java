@@ -462,7 +462,7 @@ public class NoteServiceImpl implements NoteService {
 					Note origin = (Note) redisUtil.getValue("note_" + id);
 					if(origin != null) {
 						ansNotes.add(origin);
-						ids.add(origin.getNote_id());
+						//ids.add(origin.getNote_id());
 						num--;
 					}
 				}

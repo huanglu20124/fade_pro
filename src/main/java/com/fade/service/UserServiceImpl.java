@@ -783,8 +783,8 @@ public class UserServiceImpl implements UserService {
             e.printStackTrace();
         }finally {
 			try {
-				fs.close();
-				inStream.close();
+				if(fs != null) fs.close();
+				if(inStream != null) inStream.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

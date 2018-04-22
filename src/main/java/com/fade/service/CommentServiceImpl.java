@@ -256,10 +256,9 @@ public class CommentServiceImpl implements CommentService{
 				long time = redisUtil.getKeyTime("note_" + secondComment.getNote_id(), TimeUnit.MINUTES);
 				redisUtil.addKey(key, note, time, TimeUnit.MINUTES);
 				if(note.getUser_id() != secondComment.getUser_id()){
-					
+					//如果不是对自己的帖子评论的话，更新该主人数据库通知数量
+					userDao.updateAddCommentPlus(note.getUser_id());
 				}
-				//更新该主人数据库通知数量
-				userDao.updateAddCommentPlus(note.getUser_id());
 				//准备生产消息类
 				CommentMessage message = new CommentMessage();
 				message.setComment_content(secondComment.getComment_content());
