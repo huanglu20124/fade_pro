@@ -32,6 +32,14 @@ public class NoteController {
 		return noteService.addNote(JSON.parseObject(note, Note.class),files); 
 	}
 
+	@RequestMapping(value = "/addNoteText", method = RequestMethod.POST)
+	@ResponseBody
+	public String addNoteText(String note) throws FadeException{
+		//增加的一定是原创帖，需要发的属性有user_id,nickname,note_content,head_image_url
+		System.out.println("收到增加纯文字帖子的请求");
+		return noteService.addNote(JSON.parseObject(note, Note.class),null); 
+	}
+	
 	@RequestMapping(value = "/getTenNoteByTime", method = RequestMethod.POST)
 	@ResponseBody
 	public String getTenNoteByTime(Integer user_id,Integer start, Integer concern_num,String updateList){
@@ -136,11 +144,11 @@ public class NoteController {
 		return noteService.getAllSecond(user_id, target_id, start, type);
 	}
 	
-	
 	@RequestMapping(value = "/getTenRelayNote/{note_id}/{user_id}/{start}",method =  RequestMethod.GET)
 	@ResponseBody
 	public String getTenRelayNote(@PathVariable("note_id")Integer note_id, @PathVariable("user_id")Integer user_id, 
 			@PathVariable("start")Integer start){
 		return JSON.toJSONString(noteService.getTenRelayNote(note_id, user_id, start));
 	}
+
 }

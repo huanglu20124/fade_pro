@@ -33,5 +33,10 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="src/main/webapp/lib/gexin-rp-fastjson-1.0.0.1.jar"/>
+	<classpathentry kind="lib" path="src/main/webapp/lib/gexin-rp-sdk-base-4.0.0.22.jar"/>
+	<classpathentry kind="lib" path="src/main/webapp/lib/gexin-rp-sdk-http-4.0.1.17.jar"/>
+	<classpathentry kind="lib" path="src/main/webapp/lib/gexin-rp-sdk-template-4.0.0.16.jar"/>
+	<classpathentry kind="lib" path="src/main/webapp/lib/protobuf-java-2.5.0.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

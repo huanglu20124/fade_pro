@@ -253,4 +253,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	  update preference set score=score + #{score} where
 	  	 user_id=#{user_id} and note_id=#{note_id}
 	</update>	
+	
+	<!-- 得到一定数量条活帖，重新判断生死,得到的note仅包含id，时间,续减秒数量，用户id -->
+	<select id="getNoteJudgeDie" parameterType="Integer" resultType="Note">
+	    select note_id, post_time, add_num, sub_num, user_id from note where is_die=1 and target_id=0  limit 0,#{num};
+	</select>
+	
+	<!-- 如果是原创帖的话，对应转发帖也要跟着删除 -->
+	<delete id="deleteRelayNote" parameterType="Integer">
+	    delete from note where target_id=#{note_id}
+	</delete>
 </mapper>

@@ -14,8 +14,8 @@ public class Const {
 	//公有热门推送排行榜
 	public static final String HOT_NOTES    = "hot_notes"; 
 	
-	//一个帖子的默认生存时间(单位：分钟)
-	public static final long DEFAULT_LIFE   = 60l;
+	//一个帖子的默认生存时间(单位：秒)
+	public static final long DEFAULT_LIFE   = 3600l;
 	
 	//die_list，收集死亡的帖子，每隔一分钟清理一次
 	public static final String DIE_LIST     = "die_list";
@@ -51,5 +51,15 @@ public class Const {
 	//list4详情页续秒增秒列表加载队列，其中为0的代表的是帖子本人点赞，需要再查询本人的信息,list4_ + note_id
 	//add_  增秒列表  zset member为user， value为note_id
 	//sub_  减秒列表，每次增秒或者减秒，缓存都重置为15l zset member为user， value为note_id
+	
+	//个推配置
+	public static final String GETUI_APPID = "TLfCLo6wYu76VgJzJuhy89";
+	public static final String GETUI_APPSECRET = "5UVWRUoUJBAqBCNUAocDS";
+	public static final String GETUI_APPKEY = "4Oo126YfVO7e3kYu7hlAZA";
+	public static final String GETUI_MASTERSECRET = "JKsshW3FGNATVmJ5MkuHv1";
+	public static final String GETUI_URL = "http://sdk.open.api.igexin.com/apiex.htm";
+	//保存在redis的个推用户cid池hash
+	public static final String GETUI_CIDS = "cids";
+	
 	
 }

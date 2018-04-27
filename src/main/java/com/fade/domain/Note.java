@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
 
-import javax.jws.soap.SOAPBinding.Use;
 
 public class Note implements Serializable {
 	/**
@@ -46,6 +45,9 @@ public class Note implements Serializable {
 	
 	//与上面两个属性有关，关注的人中续秒或减秒的总数量
 	private Integer relayUserNum;
+	
+	//是否是推荐的
+	private Integer isRecommend;
 	
 	public Integer getRelayUserNum() {
 		return relayUserNum;
@@ -104,6 +106,9 @@ public class Note implements Serializable {
 		this.action = 0;
 		this.baseComment_num = 0;
 		this.is_die = 1;
+		this.isRecommend = 0;
+/*		this.addUsers = new ArrayList<>();
+		this.subUsers = new ArrayList<>();*/
 	}
 	
 	public Integer getNote_id() {
@@ -256,6 +261,16 @@ public class Note implements Serializable {
 
 	public void setLiveTime(Long liveTime) {
 		this.liveTime = liveTime;
+	}
+
+	
+	
+	public Integer getIsRecommend() {
+		return isRecommend;
+	}
+
+	public void setIsRecommend(Integer isRecommend) {
+		this.isRecommend = isRecommend;
 	}
 
 	//如果note_id相等，则两个帖子相等

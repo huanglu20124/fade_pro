@@ -5,21 +5,22 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Timer;
 import org.apache.log4j.Logger;
+import org.springframework.context.ApplicationContext;
 
 import com.fade.mapper.NoteDao;
+import com.fade.service.SolrService;
 import com.fade.util.RedisUtil;
 
 public class CleanTimer{
-	private RedisUtil redisUtil;
 	private Logger logger;
 	private Timer timer;
-	private NoteDao noteDao;
+	private ApplicationContext applicationContext;
 	
-	public CleanTimer(NoteDao noteDao,RedisUtil redisUtil,Logger logger) {
-		this.redisUtil = redisUtil;
+	public CleanTimer(ApplicationContext applicationContext,Logger logger) {
 		this.logger = logger;
-		this.noteDao = noteDao;
+		this.applicationContext = applicationContext;
 	}
+	
 	public void startTimer(){
 		timer = new Timer();
 		GregorianCalendar gc = new GregorianCalendar();
@@ -27,7 +28,7 @@ public class CleanTimer{
 		gc.setTime(new Date());
 		gc.add(Calendar.SECOND, 10);
 		//每60s执行一次
-		timer.schedule(new CleanTask(noteDao,redisUtil,logger), gc.getTime(),60000);
+		timer.schedule(new CleanTask(applicationContext,logger), gc.getTime(),60000);
 		logger.info("帖子清理器启动");
 	}
 	

@@ -25,6 +25,7 @@ import javax.annotation.Resource;
 
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.ognl.InappropriateExpressionException;
+import org.apache.shiro.crypto.hash.Md5Hash;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,9 +53,14 @@ import com.fade.service.SolrService;
 import com.fade.service.UserService;
 import com.fade.util.Const;
 import com.fade.util.JDBCUtil;
+import com.fade.util.MD5Utils;
 import com.fade.util.RedisUtil;
 import com.fade.util.TimeUtil;
 import com.fade.util.TokenUtil;
+import com.gexin.rp.sdk.base.IPushResult;
+import com.gexin.rp.sdk.base.impl.AppMessage;
+import com.gexin.rp.sdk.http.IGtPush;
+import com.gexin.rp.sdk.template.LinkTemplate;
 
 public class UserTest extends BaseTest {
 /*	@Resource(name="userService")
@@ -160,7 +166,7 @@ public class UserTest extends BaseTest {
 			Note note = new Note();
 			note.setUser_id(43);
 			note.setNickname("黄路");
-			note.setNote_content("2月27日" + "。有句话说的好，爱的多深就恨得多深，如今当年的科黑和詹黑估计年龄都有25-45岁之间，大多数都已经成熟懂事了，很多人黑着黑着就黑出了感情，其实科比退役的时候已经基本没有科黑了，因为他退役的时候才幡然醒悟，原来一直是爱他的；");
+			note.setNote_content("诚宜开张圣听，以光先帝遗德，恢弘志士之气，不宜妄自菲薄，引喻失义，以塞忠谏之路也。宫中府中，俱为一体，陟罚臧否，不宜异同。若有作奸犯科及为忠善者，宜付有司论其刑赏，以昭陛下平明之理，不宜偏私，使内外异法也。");
 			note.setPost_time(TimeUtil.getCurrentTime());
 			note.setHead_image_url("image/head/2018-02/55e5bbce-e.png");
 			note.setUuid(UUID.randomUUID().toString());
@@ -177,11 +183,11 @@ public class UserTest extends BaseTest {
 	@Test
 	public void testChangeSecond() throws Exception {
 		Note note = new Note();
-		note.setUser_id(53);
+		note.setUser_id(108);
 		note.setNickname("test");
-		note.setTarget_id(1585);
-		note.setType(2);
-		System.out.println(noteService.changeSecond(note,53));
+		note.setTarget_id(2531);
+		note.setType(1);
+		System.out.println(noteService.changeSecond(note,108));
 	}
 	
 	@Test
@@ -334,6 +340,32 @@ public class UserTest extends BaseTest {
 	}
     
     @Test
+	public void testPush() throws Exception {
+    	  IGtPush push = new IGtPush(Const.GETUI_URL, Const.GETUI_APPKEY, Const.GETUI_MASTERSECRET);
+
+          // 定义"点击链接打开通知模板"，并设置标题、内容、链接
+          LinkTemplate template = new LinkTemplate();
+          template.setAppId(Const.GETUI_APPID);
+          template.setAppkey(Const.GETUI_APPKEY);
+          template.setTitle("请填写通知标题");
+          template.setText("请填写通知内容");
+          template.setUrl("http://getui.com");
+
+          List<String> appIds = new ArrayList<String>();
+          appIds.add(Const.GETUI_APPID);
+
+          // 定义"AppMessage"类型消息对象，设置消息内容模板、发送的目标App列表、是否支持离线发送、以及离线消息有效期(单位毫秒)
+          AppMessage message = new AppMessage();
+          message.setData(template);
+          message.setAppIdList(appIds);
+          message.setOffline(true);
+          message.setOfflineExpireTime(1000 * 600);
+          
+          IPushResult ret = push.pushMessageToApp(message);
+          System.out.println(ret.getResponse().toString());
+	}
+    
+    @Test
 	public void testAll() throws Exception {
     	List<Note>updateList =  new ArrayList<>();
 /*    	Note note = new Note();
@@ -341,7 +373,8 @@ public class UserTest extends BaseTest {
     	note.setTarget_id(1486);
     	note.setType(1);
     	updateList.add(note);*/
-    	testWrite(userService.getTenRecommendUser(81, 1),false);
+    	
+    	testWrite(noteService.getTenNoteByTime(46, 0, 10, updateList),false);
 	}
       
 /*    @Test

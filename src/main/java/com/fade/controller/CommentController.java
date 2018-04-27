@@ -1,6 +1,4 @@
- package com.fade.controller;
-
-
+package com.fade.controller;
 import javax.annotation.Resource;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;

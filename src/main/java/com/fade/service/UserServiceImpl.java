@@ -10,6 +10,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,13 +35,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.alibaba.fastjson.JSON;
 import com.fade.domain.AddMessage;
-import com.fade.domain.Comment;
 import com.fade.domain.CommentMessage;
-import com.fade.domain.CommentQuery;
-import com.fade.domain.Image;
+import com.fade.domain.Department;
 import com.fade.domain.Note;
 import com.fade.domain.NoteQuery;
 import com.fade.domain.PersonPage;
+import com.fade.domain.PushMessage;
 import com.fade.domain.SimpleResponse;
 import com.fade.domain.TokenModel;
 import com.fade.domain.User;
@@ -55,6 +55,13 @@ import com.fade.util.RongCloudHelper;
 import com.fade.util.TimeUtil;
 import com.fade.util.TokenUtil;
 import com.fade.websocket.MessageWebSocketHandler;
+import com.gexin.rp.sdk.base.IPushResult;
+import com.gexin.rp.sdk.base.impl.SingleMessage;
+import com.gexin.rp.sdk.base.impl.Target;
+import com.gexin.rp.sdk.exceptions.RequestException;
+import com.gexin.rp.sdk.http.IGtPush;
+import com.gexin.rp.sdk.template.NotificationTemplate;
+import com.gexin.rp.sdk.template.style.Style0;
 
 @SuppressWarnings("deprecation")
 @Service("userService")
@@ -373,6 +380,15 @@ public class UserServiceImpl implements UserService {
 				origin.setSex(user.getSex());
 			if (user.getSummary() != null)
 				origin.setSummary(user.getSummary());
+			if(user.getPassword() != null){
+				String salt = userDao.getSaltById(user.getUser_id());
+				String password_md5 = new Md5Hash(user.getPassword(), salt, 1).toString();
+				origin.setPassword(password_md5);
+			}
+			if(user.getDepartment_id() != null)
+				origin.setDepartment_id(user.getDepartment_id());
+			if(user.getSchool_id() != null)
+				origin.setSchool_id(user.getSchool_id());
 			if (userDao.updateUserById(origin) == 1) {
 				//更新solr数据库
 				solrService.solrAddUpdateUser(origin);
@@ -470,7 +486,15 @@ public class UserServiceImpl implements UserService {
 			//未读通知粉丝数量+1
 			userDao.updateAddFansPlus(star_id);
 			//通知前端更新
-			webSocketHandler.sendMessageToUser(star_id, JSON.toJSONString(new SimpleResponse("01",null)));
+			SimpleResponse message = new SimpleResponse("01", null);
+			Map<String, Object>temp = new HashMap<>();
+			User fans = userDao.getUserById(fans_id);
+			temp.put("user", fans);
+			message.setExtra(temp);
+			//websocket推送
+			webSocketHandler.sendMessageToUser(star_id, JSON.toJSONString(message));
+			//个推推送到安卓前端
+			pushMessage(star_id, "你有一位新粉丝", new PushMessage(null, 3));
 		}else {
 			response.setErr("关注失败");
 		}
@@ -792,13 +816,13 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public String getFans(Integer user_id, Integer start) {
+	public String getFans(Integer user_id, Integer my_id, Integer start) {
 		//个人页，分页查询20条粉丝
 		UserQuery query = new UserQuery();
 		List<User>list = userDao.getFans(user_id,start*20);
 		//检查对粉丝的关注情况
 		for(User user : list){
-			if(userDao.getRelation(user.getUser_id(),user_id) != null){
+			if(userDao.getRelation(user.getUser_id(),my_id) != null){
 				user.setIsConcern(1);
 			}else {
 				user.setIsConcern(0);
@@ -810,14 +834,150 @@ public class UserServiceImpl implements UserService {
 	}
 	
 	@Override
-	public String getConcerns(Integer user_id, Integer start) {
+	public String getConcerns(Integer user_id,Integer my_id, Integer start) {
 		//个人页，分页查询20条关注者
 		UserQuery query = new UserQuery();
 		List<User>list = userDao.getConcerns(user_id,start*20);
+		for(User user : list){
+			if(userDao.getRelation(user.getUser_id(),my_id) != null){
+				user.setIsConcern(1);
+			}else {
+				user.setIsConcern(0);
+			}
+		}
 		query.setList(list);
 		query.setStart(++start);
 		return JSON.toJSONString(query);
 	}
 
+	@Override
+	public String getOriginRecommendUsers(Integer user_id, Integer start) {
+		List<User>list = userDao.getAllUsers();
+		User my = userDao.getUserById(user_id);
+		UserQuery query = new UserQuery();
+		for(User user : list){
+			double originScore = 0;
+			if(user.getFans_num() <= 10) originScore += 1;
+			else if (user.getFans_num() <= 100) originScore += 2;
+			else originScore += 3;
+			
+			//根据学校院系加分
+			if(my.getSchool_id() == user.getSchool_id()) originScore += 1;
+			if(my.getDepartment_id() == user.getDepartment_id()) originScore += 1;
+			
+			//根据性别加分
+			if(my.getSex().equals("男") && user.getSex().equals("女"))  originScore += 1;
+			else if(my.getSex().equals("女") && user.getSex().equals("男"))  originScore += 1;
+			user.setRecommendScore(originScore);
+		}
+		
+		list.sort(new RecommendUserComparator());
+		if(start < list.size()){
+			if(start + 9 < list.size()) query.setList(list.subList(start, start + 9));
+			else query.setList(list.subList(start, list.size()));
+		}
+		else query.setList(new ArrayList<>());
+		query.setStart(start + 10);
+		return JSON.toJSONString(query);
+	}
+
+	class RecommendUserComparator implements Comparator<User>{
+		@Override
+		public int compare(User user1, User user2) {
+			return user1.getRecommendScore().compareTo(user2.getRecommendScore())*-1;
+		}
+		
+	}
+
+	@Override
+	public String getSchoolDepartment(Integer school_id) {
+		//注返回一个学校所有院系
+		List<Department>list = userDao.getSchoolDepartment(school_id);
+		Map<String, Object>map = new HashMap<>();
+		map.put("list", list);
+		return JSON.toJSONString(map);
+	}
+
+	@Override
+	public String changePasswordTel(String telephone, String password) {
+		//客户端手机验证过后，修改密码
+		User user = userDao.getUserByTel(telephone);
+		SimpleResponse response = new SimpleResponse();
+		if(user == null)  response.setErr("用户不存在");
+		else {
+			String salt = userDao.getSaltById(user.getUser_id());
+			String password_md5 = new Md5Hash(password, salt, 1).toString();
+			userDao.updateUserPass(telephone, password_md5);
+			response.setSuccess("修改密码成功");
+		}
+		return JSON.toJSONString(response);
+	}
+
+	@Override
+	public String addClientId(Integer user_id, String clientid) {
+		if(user_id != null && clientid != null){
+			redisUtil.hashAdd(Const.GETUI_CIDS, user_id.toString(), clientid);
+		}
+		return "{}";
+	}
+
+	@Override
+	public void pushMessage(Integer user_id, String msg,  PushMessage pushMessage) {
+		//个推通知原主人
+		 IGtPush push = new IGtPush("http://sdk.open.api.igexin.com/apiex.htm", 
+				 Const.GETUI_APPKEY, Const.GETUI_MASTERSECRET);
+		
+	    NotificationTemplate template = new NotificationTemplate();
+        // 设置APPID与APPKEY
+        template.setAppId(Const.GETUI_APPID);
+        template.setAppkey(Const.GETUI_APPKEY);
+        // 透传消息设置，1为强制启动应用，客户端接收到消息后就会立即启动应用；2为等待应用启动
+        template.setTransmissionType(1);
+        if(pushMessage != null) template.setTransmissionContent(JSON.toJSONString(pushMessage));
+        // 设置定时展示时间
+        // template.setDuration("2015-01-16 11:40:00", "2015-01-16 12:24:00");
+
+        Style0 style = new Style0();
+        // 设置通知栏标题与内容
+        style.setTitle("Fade");
+        style.setText(msg);
+        // 配置通知栏图标
+        style.setLogo("icon.png");
+        // 配置通知栏网络图标
+        style.setLogoUrl("");
+        // 设置通知是否响铃，震动，或者可清除
+        style.setRing(true);
+        style.setVibrate(true);
+        style.setClearable(true);
+        template.setStyle(style);
+	        
+        SingleMessage message = new SingleMessage();
+        message.setOffline(true);
+        // 离线有效时间10天，单位为毫秒，可选
+        message.setOfflineExpireTime(24 * 3600 * 1000 * 10);
+        message.setData(template);
+        // 可选，1为wifi，0为不限制网络环境。根据手机处于的网络情况，决定是否下发
+        message.setPushNetWorkType(0);
+        Target target = new Target();
+        target.setAppId(Const.GETUI_APPID);
+        String clientid = (String) redisUtil.hashGet(Const.GETUI_CIDS, user_id.toString());  
+        target.setClientId(clientid);
+        //target.setAlias(Alias);
+        IPushResult ret = null;
+        try {
+            ret = push.pushMessageToSingle(message, target);
+            logger.info("个推成功发送消息");
+        } catch (RequestException e) {
+            e.printStackTrace();
+            ret = push.pushMessageToSingle(message, target, e.getRequestId());
+        }
+        if (ret != null) {
+            System.out.println(ret.getResponse().toString());
+        } else {
+            System.out.println("服务器响应异常");
+        }
+		
+	}
+	
 	
 }

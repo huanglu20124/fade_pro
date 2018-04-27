@@ -1,13 +1,12 @@
 package com.fade.mapper;
 
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Param;
 
 import com.fade.domain.AddMessage;
-import com.fade.domain.Comment;
 import com.fade.domain.CommentMessage;
+import com.fade.domain.Department;
 import com.fade.domain.Note;
 import com.fade.domain.User;
 
@@ -124,6 +123,21 @@ public interface UserDao {
 			@Param("recommendNote")String recommendNote);
 	//得到推荐帖子
 	public String getRecommendNote(Integer user_id);
-	
+	//一口气得到全部用户
+	public List<User> getAllUsers();
+	//根据用户id得到盐
+	public String getSaltById(Integer user_id);
+	//根据用户id动态数量+1
+	public void updateDynamicNumPlus(Integer user_id);
+	//根据用户id动态数量-1
+	public void updateDynamicNumMinus(Integer user_id);
+	//转发者的动态减-1
+	public void updateDynamicNumRelayUsers(Integer note_id);
+	//根据电话号码修改密码
+	public void updateUserPass(@Param("telephone")String telephone, @Param("password")String password);
+	//返回一个学校所有院系
+	public List<Department> getSchoolDepartment(Integer school_id);
+	//得到该用户关注的所有人的id
+	public List<Integer> getAllConcernsId(Integer user_id);
 	
 }

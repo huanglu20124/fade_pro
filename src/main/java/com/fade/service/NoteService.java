@@ -45,4 +45,8 @@ public interface NoteService {
 
 	void updateReference(UpdateMessage message);
 	
+	boolean judgeDie(Note note,long time);
+	
+
+	
 }

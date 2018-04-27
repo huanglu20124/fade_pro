@@ -1,7 +1,6 @@
 package com.fade.service;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +16,7 @@ import com.fade.domain.Comment;
 import com.fade.domain.CommentMessage;
 import com.fade.domain.CommentQuery;
 import com.fade.domain.Note;
+import com.fade.domain.PushMessage;
 import com.fade.domain.SecondComment;
 import com.fade.domain.SimpleResponse;
 import com.fade.domain.UpdateMessage;
@@ -42,6 +42,9 @@ public class CommentServiceImpl implements CommentService{
 	
 	@Resource(name = "commentDao")
 	private CommentDao commentDao;
+	
+	@Resource(name = "userService")
+	private UserService userService;
 	
 	@Resource(name = "messageWebSocketHandler")
 	private MessageWebSocketHandler webSocketHandler;
@@ -208,11 +211,10 @@ public class CommentServiceImpl implements CommentService{
 				note.setBaseComment_num(note.getBaseComment_num() +1);
 				long time = redisUtil.getKeyTime("note_" + comment.getNote_id(), TimeUnit.MINUTES);
 				redisUtil.addKey(key, note, time, TimeUnit.MINUTES);
-				//websocket通知主人更新
+
 				//更新该主人数据库通知数量，假如不是自己对自己评论
 				if(comment.getUser_id() != note.getUser_id()){
 					userDao.updateAddCommentPlus(note.getUser_id());
-					webSocketHandler.sendMessageToUser(note.getUser_id(),JSON.toJSONString(new SimpleResponse("02",null)));
 					//创建评论通知消息
 					CommentMessage message = new CommentMessage();
 					message.setComment_content(comment.getComment_content());
@@ -222,6 +224,15 @@ public class CommentServiceImpl implements CommentService{
 					message.setComment_id(comment.getComment_id());
 					message.setComment_time(comment.getComment_time());
 					commentDao.addCommentMessage(message);
+					
+					//websocket通知主人更新
+					SimpleResponse pushMessage = new SimpleResponse("02", null);
+					Map<String, Object>temp = new HashMap<>();
+					temp.put("comment", message);
+					pushMessage.setExtra(temp);
+					webSocketHandler.sendMessageToUser(note.getUser_id(),JSON.toJSONString(pushMessage));
+					//个推推送
+					userService.pushMessage(note.getUser_id(), "你有一条新评论", new PushMessage(comment, 2));
 				}
 			}
 				
@@ -268,17 +279,31 @@ public class CommentServiceImpl implements CommentService{
 				message.setComment_time(secondComment.getComment_time());
 				//websocket通知主人更新
 				if(secondComment.getTo_user_id() != null && secondComment.getTo_user_id() != secondComment.getUser_id()){
-					//通知to_user_id
-					webSocketHandler.sendMessageToUser(secondComment.getTo_user_id(),JSON.toJSONString(new SimpleResponse("02",null)));
 					message.setTo_id(secondComment.getTo_user_id());
 					//添加评论消息类
 					commentDao.addCommentMessage(message);
+					
+					//通知to_user_id
+					SimpleResponse pushMessage = new SimpleResponse("02", null);
+					Map<String, Object>temp = new HashMap<>();
+					temp.put("comment", message);
+					pushMessage.setExtra(temp);
+					webSocketHandler.sendMessageToUser(secondComment.getTo_user_id(),JSON.toJSONString(pushMessage));
+					//个推推送
+					userService.pushMessage(secondComment.getTo_user_id(), "你有一条新评论", new PushMessage(secondComment, 2));
 				}else if(secondComment.getFirst_id() != null && secondComment.getFirst_id() != secondComment.getUser_id()){
-					//通知所属的一级评论者first_id
-					webSocketHandler.sendMessageToUser(secondComment.getFirst_id(),JSON.toJSONString(new SimpleResponse("02",null)));
 					message.setTo_id(secondComment.getFirst_id());
 					//添加评论消息类
 					commentDao.addCommentMessage(message);
+					
+					//通知所属的一级评论者first_id
+					SimpleResponse pushMessage = new SimpleResponse("02", null);
+					Map<String, Object>temp = new HashMap<>();
+					temp.put("comment", message);
+					pushMessage.setExtra(temp);
+					webSocketHandler.sendMessageToUser(secondComment.getFirst_id(),JSON.toJSONString(pushMessage));
+					//个推推送
+					userService.pushMessage(secondComment.getFirst_id(), "你有一条新评论", new PushMessage(secondComment, 2));					
 				}
 			}
 			//redis更新一级评论的信息

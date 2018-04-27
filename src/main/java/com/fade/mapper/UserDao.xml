@@ -132,7 +132,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<!-- 编辑用户信息(部分) -->
 	<update id="updateUserById" parameterType="User">
 	    update user set
-	      nickname=#{nickname},area=#{area},school_id=#{school_id},sex=#{sex},summary=#{summary},head_image_url=#{head_image_url}
+	      nickname=#{nickname}, area=#{area}, school_id=#{school_id}, sex=#{sex},
+	      summary=#{summary}, head_image_url=#{head_image_url}, password=#{password},
+	      department_id=#{department_id}, school_id=#{school_id}
 	        where user_id=#{user_id}
 	</update>
 	
@@ -339,7 +341,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 			
 	<!-- fade数量加一 -->
 	<update id="updateFadeNumPlus" parameterType="Integer">
-	   update user set fade_num=fade_num+1 where user_id=#{user_id}
+	   update user set fade_num=fade_num+1, dynamicNum=dynamicNum+1 where user_id=#{user_id}
 	</update>
 	
 	<!-- 关注数量+1 -->
@@ -490,4 +492,51 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-ma
 	<select id="getRecommendNote" parameterType="Integer" resultType="String">
 	  select recommendNote from user where user_id=#{user_id}
 	</select>
+	
+	<!-- 得到全部用户 -->
+	<select id="getAllUsers" resultType="User">
+		select a.user_id, a.telephone, a.fade_name, a.nickname, 
+		 a.sex,a.head_image_url,a.register_time, a.summary, a.wechat_id, a.weibo_id,
+		 a.qq_id,a.concern_num, a.fans_num, a.fade_num, a.area, a.school_id, 
+		 b.school_name
+		from user a, school b
+		where
+		a.school_id=b.school_id
+	</select>
+	
+	<!-- 根据用户id得到盐 -->
+	<select id="getSaltById" parameterType="Integer" resultType="String">
+	    select salt from user where user_id = #{user_id}
+	</select>
+	
+	<!-- 根据用户id动态数量+1 -->
+	<update id="updateDynamicNumPlus" parameterType="Integer">
+	    update user set dynamicNum = dynamicNum + 1 where user_id=#{user_id}
+	</update>
+	
+	<!-- 根据用户id动态数量-1 -->
+	<update id="updateDynamicNumMinus" parameterType="Integer">
+	    update user set dynamicNum = dynamicNum - 1 where user_id=#{user_id}
+	</update>	
+	
+	<update id="updateDynamicNumRelayUsers" parameterType="Integer">
+	    update user set dynamicNum=dynamicNum-1 where user_id in 
+	      (select user_id from note where target_id=#{note_id})
+	</update>
+	
+	<!-- 根据电话号码修改密码 -->
+	<update id="updateUserPass">
+	    update user set password=#{password} where telephone=#{telephone}
+	</update>
+	
+	<!-- 返回一个学校所有院系 -->
+	<select id="getSchoolDepartment" parameterType="Integer" resultType="Department">
+	   select department_id, school_id, department_name from department where school_id=#{school_id}
+	</select>
+	
+	<!-- 得到该用户关注的所有人的id -->
+	<select id="getAllConcernsId" parameterType="Integer" resultType="Integer">
+	   select user_star from relation where user_fans=#{user_id}
+	</select>
+		
 </mapper>

@@ -215,4 +215,11 @@ public class RedisUtil{
 		return redisTemplate.opsForZSet().score(key, object);
 	}
 
+	public void hashAdd(String key, Object hashKey, Object value){
+		redisTemplate.opsForHash().put(key, hashKey, value);
+	}
+	
+	public Object hashGet(String key, Object hashKey){
+		return redisTemplate.opsForHash().get(key, hashKey);
+	}	
 }

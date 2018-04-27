@@ -2,6 +2,7 @@ package com.fade.service;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fade.domain.PushMessage;
 import com.fade.domain.TokenModel;
 import com.fade.domain.User;
 import com.fade.exception.FadeException;
@@ -58,9 +59,18 @@ public interface UserService {
 
 	void downloadPic(String url, String localPath);
 
-	String getFans(Integer user_id, Integer start);
+	String getFans(Integer user_id, Integer my_id, Integer start);
 
-	String getConcerns(Integer user_id, Integer start);
+	String getConcerns(Integer user_id, Integer my_id, Integer start);
 
+	String getOriginRecommendUsers(Integer user_id, Integer start);
+
+	String getSchoolDepartment(Integer school_id);
+
+	String changePasswordTel(String telephone, String password);
+
+	String addClientId(Integer user_id, String clientid);
+	
+	void pushMessage(Integer user_id, String msg,  PushMessage pushMessage);
 
 }

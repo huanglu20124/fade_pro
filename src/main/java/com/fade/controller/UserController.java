@@ -95,6 +95,14 @@ public class UserController {
 		return userService.updateUserById(JSON.parseObject(user, User.class),file);
 	}
 
+	@RequestMapping(value = "/updateUserByIdText", method =  RequestMethod.POST)
+	@ResponseBody
+	public String updateUserByIdText(String user) throws FadeException{
+		//包括了上传头像
+		//编辑用户信息
+		return userService.updateUserById(JSON.parseObject(user, User.class),null);
+	}
+	
 	@RequestMapping(value = "/logoutByToken/{tokenModel}", method =  RequestMethod.DELETE)
 	@ResponseBody
 	public String logoutUserByToken(@PathVariable("tokenModel")String tokenModel)throws FadeException{
@@ -125,9 +133,9 @@ public class UserController {
 		return userService.concern(fans_id,star_id);
 	}
 
-	@RequestMapping(value = "/cancelConcern/{fans_id}/{star_id}",method =  RequestMethod.POST)
+	@RequestMapping(value = "/cancelConcern",method =  RequestMethod.POST)
 	@ResponseBody
-	public String cancelConcern(@PathVariable("fans_id")Integer fans_id, @PathVariable("star_id")Integer star_id){
+	public String cancelConcern(Integer fans_id,Integer star_id){
 		return userService.cancelConcern(fans_id,star_id);
 	}
 	
@@ -222,18 +230,47 @@ public class UserController {
 		return userService.getOldComment(user_id, start);
 	}
 	
-	@RequestMapping(value = "/getFans/{user_id}/{start}",method =  RequestMethod.GET)
+	@RequestMapping(value = "/getFans/{user_id}/{my_id}/{start}",method =  RequestMethod.GET)
 	@ResponseBody
-	public String getFans(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+	public String getFans(@PathVariable("user_id")Integer user_id,@PathVariable("my_id")Integer my_id,
+			@PathVariable("start")Integer start){
 		//个人页，分页查询20条粉丝
-		return userService.getFans(user_id, start);
+		return userService.getFans(user_id, my_id,start);
 	}	
 	
-	@RequestMapping(value = "/getConcerns/{user_id}/{start}",method =  RequestMethod.GET)
+	@RequestMapping(value = "/getConcerns/{user_id}/{my_id}/{start}",method =  RequestMethod.GET)
 	@ResponseBody
-	public String getConcerns(@PathVariable("user_id")Integer user_id,@PathVariable("start")Integer start){
+	public String getConcerns(@PathVariable("user_id")Integer user_id,@PathVariable("my_id")Integer my_id,
+			@PathVariable("start")Integer start){
 		//个人页，分页查询20条关注者
-		return userService.getConcerns(user_id, start);
+		return userService.getConcerns(user_id, my_id, start);
 	}		
 
+	@RequestMapping(value = "/getOriginRecommendUsers/{user_id}/{start}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getOriginRecommendUsers(@PathVariable("user_id")Integer user_id, @PathVariable("start")Integer start){
+		//注册完后推荐的一批用户,start分页用的
+		return userService.getOriginRecommendUsers(user_id, start);
+	}
+	
+	@RequestMapping(value = "/getSchoolDepartment/{school_id}",method =  RequestMethod.GET)
+	@ResponseBody
+	public String getSchoolDepartment(@PathVariable("school_id")Integer school_id){
+		//返回一个学校所有院系
+		return userService.getSchoolDepartment(school_id);
+	}	
+
+	@RequestMapping(value = "/changePasswordTel",method =  RequestMethod.POST)
+	@ResponseBody
+	public String changePasswordTel(String telephone, String password){
+		//客户端手机验证过后，修改密码
+		return userService.changePasswordTel(telephone, password);
+	}	
+
+	@RequestMapping(value = "/addClientId", method =  RequestMethod.POST)
+	@ResponseBody
+	public String addClientId(Integer user_id,String clientid){
+		//添加个推需要的clientid保存到一个hash结构中
+		return userService.addClientId(user_id,clientid);
+	}
 }

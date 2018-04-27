@@ -66,6 +66,10 @@ public interface NoteDao {
 	//更新偏好分数
 	void updatePreference(@Param("note_id")Integer note_id, @Param("user_id")Integer user_id,
 			@Param("score")Double score);
+	//得到一定数量条活的原帖，重新判断生死,得到的note仅包含id，时间,续减秒数量
+	List<Note> getNoteJudgeDie(Integer num);
+	//如果是原创帖的话，对应转发帖也要跟着删除
+	void deleteRelayNote(Integer note_id);
 	
 	
 }
